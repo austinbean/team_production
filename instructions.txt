@@ -5,6 +5,9 @@ There is a nice chapter by Jesus Fernandez Villaverde about Git here:
 https://www.sas.upenn.edu/~jesusfv/Chapter_HPC_5_Git.pdf
 It is probably more detail than you need...
 
+
+ ##### INSTALLATION #####
+
 Steps:
 
 - sign up at github.com
@@ -12,15 +15,6 @@ Steps:
 - my account is github.com/austinbean
 - the repository is github.com/austinbean/team_production
 - once I have your username I will add you as a member.
-
-Work flow... a (broadly accurate) summary:
-
-- There is a "master" version of the project which lives on the website
-- Your computer will (at your command (TBexplained)) make sure the local version is the same as the "master" version
-- When you want to change something, you create a version of the current "master" (this is called a "branch")
-- You make your edits, make sure they work, whatever.
-- Then you tell the program to incorporate your fixes into the master version ("merging" a "branch")
-- Now there is a new "master" version containing your edits.
 
 I don't know if you are Mac or PC users.  These instructions should work for Mac, but will be quite similar for PC vversions, I imagine.
 
@@ -32,3 +26,26 @@ Suppose that it is installed...
 Navigate (easiest via a terminal or the command line) to whatever folder you want to keep the project in, then type "git clone https://github.com/austinbean/team_production.git"
 
 - This should copy the current master version to your local machine.
+
+
+
+#### USAGE ######
+
+Work flow... a (broadly accurate) summary:
+
+- There is a "master" version of the project which lives on the website
+- Your computer will (at your command (TBexplained)) make sure the local version is the same as the "master" version
+- When you want to change something, you create a version of the current "master" (this is called a "branch")
+- You make your edits, make sure they work, whatever.
+- Then you tell the program to incorporate your fixes into the master version ("merging" a "branch")
+- Now there is a new "master" version containing your edits.
+
+
+Details:
+- When you want to start editing, always navigate to the folder containing the project file and type "git pull".  It will either say "already up to date" or get the most recent version.
+- When you want to make an edit, you do: git checkout -b name_of_new_branch -> the "-b" creates a new "branch" which you give some name.
+- Make your edits.  They work.  Great.  Save the file.
+- Then you need to tell git about them.  This is called "committing"
+- Each "commit" comes with a "message".  The message says what you did.  (The system also records who did it.)
+	- You can edit multiple files and commit them separately OR do it all at once.
+- You are (broadly speaking) going to type "git commit
