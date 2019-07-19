@@ -1,1 +1,15 @@
 how it works...
+
+
+There is a nice chapter by Jesus Fernandez Villaverde about Git here: 
+https://www.sas.upenn.edu/~jesusfv/Chapter_HPC_5_Git.pdf
+It is probably more detail than you need...
+
+Steps:
+
+- sign up at github.com
+- send me your username
+- my account is github.com/austinbean
+- the repository is github.com/austinbean/team_production
+-  
+
