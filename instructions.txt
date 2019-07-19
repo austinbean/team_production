@@ -11,5 +11,24 @@ Steps:
 - send me your username
 - my account is github.com/austinbean
 - the repository is github.com/austinbean/team_production
--  
+- once I have your username I will add you as a member.
 
+Work flow... a (broadly accurate) summary:
+
+- There is a "master" version of the project which lives on the website
+- Your computer will (at your command (TBexplained)) make sure the local version is the same as the "master" version
+- When you want to change something, you create a version of the current "master" (this is called a "branch")
+- You make your edits, make sure they work, whatever.
+- Then you tell the program to incorporate your fixes into the master version ("merging" a "branch")
+- Now there is a new "master" version containing your edits.
+
+I don't know if you are Mac or PC users.  These instructions should work for Mac, but will be quite similar for PC vversions, I imagine.
+
+- If you are on a PC, you should go here: https://git-scm.com/download/win to download Git.
+- If you are on a Mac, just open a terminal, type "git --version" and then hit enter.  It will prompt you automatically to install both XCode, which includes git.
+- There are desktop versions of this software.  I am less familiar with them.
+
+Suppose that it is installed...
+Navigate (easiest via a terminal or the command line) to whatever folder you want to keep the project in, then type "git clone https://github.com/austinbean/team_production.git"
+
+- This should copy the current master version to your local machine.
