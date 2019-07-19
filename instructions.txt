@@ -1,4 +1,3 @@
-how it works...
 
 
 There is a nice chapter by Jesus Fernandez Villaverde about Git here: 
@@ -45,7 +44,17 @@ Details:
 - When you want to start editing, always navigate to the folder containing the project file and type "git pull".  It will either say "already up to date" or get the most recent version.
 - When you want to make an edit, you do: git checkout -b name_of_new_branch -> the "-b" creates a new "branch" which you give some name.
 - Make your edits.  They work.  Great.  Save the file.
+
+	# Committing
 - Then you need to tell git about them.  This is called "committing"
 - Each "commit" comes with a "message".  The message says what you did.  (The system also records who did it.)
 	- You can edit multiple files and commit them separately OR do it all at once.
-- You are (broadly speaking) going to type "git commit
+- You are (broadly speaking) going to type (without the double quotes around the next command, but with the single quotes aroudn the message) ""git commit some_filename_which_you_edited_including_the_extension -m "this is what I did to the file I edited...." ""
+- "-m" means "What follows in quotation marks is my 'commit message' where I will describe what I did"
+- This is obligatory and should be reasonable detailed, so that your coauthors can tell what you did.
+- If you edited multiple files and want to save them all at once, you can replace  some_filename_..._etc above with "-a" (no quotes) which means "all"
+
+	# Merging.
+- You made some good edits and want to make sure your coauthors have access to the latest and greatest version.
+- This is accomplished by "merging" your "branch" back into "master"
+- 
