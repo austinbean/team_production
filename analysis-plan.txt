@@ -1,0 +1,80 @@
+Analysis plan
+
+Written by: Atul 
+Last updated: Aug 12, 2019
+
+We plan to first focus on understanding the volume-outcome relationship for individuals and teams, including learning dynamics. In the discussion below
+I assume we will do this for surgeons, but we could go beyond surgeons to PCPs, etc. I think assigning patients to surgeons and therefore linking
+post-surgery health and spending outcomes to the surgeon is straightforward, which is why i like surgeons.
+
+I think the analysis should proceed in 3 steps:
+
+1. A big part of (ultimately) selling the paper will be to establish the quasi-random matching of physicians -- both with each other
+and with patients. Since this is essential in establishing why this setting is better than what's been done before (else econ journals 
+will keep rejecting), I think it is good to do some quick tests to see if this assertion is rejected by the data before we go all in. 
+We cannot think of everything on this until we present at conferences and get feedback, but we should do basic things. 
+
+- Sample basics:
+	- The data should be organized around index surgeries. A patient can enter multiple times if she has multiple surgeries, but i think we should exclude surgeries with a prior 
+	surgery/hospital stay in the previous 12 months to make sure we get 'index' episodes. This way we will attribute outcomes correctly and not pick up poor quality
+	care in the previous month, etc. If 12 months is too stringent forcing us to drop too many cases, we can use a shorter moratorium period, but not less than 30 days.
+	Should we include family members? -XXX
+
+	- Generate a vector of risk indicators for the patient at the time of the surgery - gender, age, co-morbidity dummies, risk score -- whatever -- 
+	all based on one-year utilization history, let's call it X.
+
+	- Assign each surgery to a surgeon. if two surgeons were involved, each one gets credit for the surgery. so the same surgery will be associated with two surgeons. Alternatively,
+	such surgeries could enter as two separate rows, one for each surgeon. also include a dummy to indicate this was a team effort. -XXX
+
+- Tests of quasi-random patient assignment and volume:
+	a) matching of surgeons and patients:
+		Estimate f.e. models with each element of X on the left hand side, and surgeon f.e. on the RHS. If testing continuously varying risk indicators (such as risk score)
+		we can simply generate a dummy for the patient being above vs. below median risk and use that as the outcome.
+
+		As controls include base/location f.e., year f.e., and surgeon rank/seniority. The idea is to test quasi-random matching conditioning on these base, year and the physician's seniority.
+ 
+		i) Are surgeon f.e. jointly significant?
+		
+		ii) What share of total variation is explained by physician f.e. There may be an automated way of doing (ii), but a first principles way
+		would be to see what proportion of total R-squared is due to inclusion of surgeon f.e. i.e. first estimate model without surgeon f.e., then estimate model including f.e. and obtain %.
+		-XXX
+		
+		iii) Are sicker patients assigned to "higher quality" surgeons? This is a very crucial test since it directly addresses the concern of whether patients
+		have choice in selecting physicians. Include a surgeon measure of quality - past performance on mortality, spending, rank of medical school, total experience -- 
+		and test if coefficient on this is significant, conditioning on base, year and rank f.e.  -XXX 	
+	
+	b) Surgeon control over transfers:
+		i) It will be nice to have some descriptive stat like "xx% of transfers occur within 6 months of when the person is due for a transfer." Ideally we want this number to be close to 1,
+		but we should know this number. -XXX
+		
+		ii) Can we predict probability of transfer with high degree of certainty? Create a panel data organized around physician-years. Let DV be a dummy for transfer in a given year, and 
+		as controls include surgeon tenure in current posting and seniority/rank. What is the R-squared of this regression? Ideally we would like it to be high. Any other controls? -XXX
+		
+		iii) Are certain types of physicians more or less likely to receive an off-cycle transfer? To test this possibility, we could create a data file at the physician-transfer level i.e.
+		each transfer event is an osbervation here, so each physician will enter multiple times. Generate a dummy for the transfer being off-cycle (need to define). Use this as the DV.
+		On the RHS, include various controls for the physician -- rank/seniority, tenure at current location, some measure of quality/skill, gender. Ideally we want coefficients on quality/skill
+		to be jointly non-significant and small relative to those on rank and tenure. -XXX
+	
+	c) Patient control over transfers:
+		We can replicate all three exercises above for patients as well.
+		
+	d) Is volume exogenously assigned to physicians? An important concern is that "better" surgeons will do more and complex surgeries, all else equal. i.e. the reverse causality argument.
+		i) Organize a physician-year panel (dropping years of transfers) and generate a dummy for the physician doing more than the median number of surgeries. Then estimate a model with 
+		physician, base and year f.e., and physician rank. Test if physician f.e. are jointly significant.
+		
+		ii) Above we tested simply for volume, but we should also test for patient complexity. If we are able to construct a patient risk score, we can calculate a mean patient risk score for
+			each surgeon. Then use this as the DV and estimate a similar model as above.
+		
+		ii) Another way to test volume assignment is if physicians bounce around above and below the median (relative to their base) or remain consistently in the top or bottom half. If 
+		it is the latter, it would indicate that there is some non-random assignment going on. I'm not sure how to test this though. Ideas? - XXX 
+
+2. Main tests of volume effect on outcomes: 
+	If the above tests are favorable, then we can proceed with confidence to the main estimation models and test if greater volume leads to better outcomes for patients. I think if we establish 
+	quasi-random assignment, we can simply estimate OLS models where some measure of lagged volume is on the RHS and patient outcomes are on the LHS. AB is probably more familiar with how these have
+	been estimated in previous literature.
+
+3. Test of learning dynamics 
+	We can think about these as we start seeing results on V-O. The nice thing about looking at learning is that it can be an independent paper by itself even if we get a null result 
+	on V-O i.e. we are unable to reject no effect of greater volume on patient outcomes. But if that's the case, we would do explore learning in a different way. so i think better to 
+	leave this for later.
+	
