@@ -7,9 +7,17 @@ set seed 41
 *  observation numbers
 set obs 100000
 
+local file_p = "/Users/tuk39938/Desktop/programs/team_production/"
+* local file_p = "/atul's/file/path/here"
+* local file_p = "/steve's/file/path/here"
 
-* ID number variable
-	local id_source ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890
+* RENAME TO WHATEVER THE MERGE VARIABLE IS...
+
+gen x_MERGE_VAR = string(_n)
+label variable x_MERGE_VAR "MERGE ON THIS"
+
+gen MERGE_VAR = x_MERGE_VAR 
+label variable MERGE_VAR "MERGE ON THIS"
 
 * Variables:
 
@@ -548,4 +556,285 @@ replace SOURCE_TABLE = "MDR_SIDR_DOD_2004_2010" if star < 0.43
 replace SOURCE_TABLE = "MDR_SIDR_DOD_2011_2017" if star >= 0.43
 drop star 
 label variable SOURCE_TABLE "" 
+
+
+* ADDING THE SECOND FILE  
+	* direct link: https://github.com/austinbean/team_production/blob/d41689429cd61450366e2d4d509bc8d872370357/codebook.log#L3067
+	* this will generate from the first file so that the merging process is sensible
+	* all vars in section have x_ prepended to name to keep later
+
+gen x_pid_pde_patient = PID_PDE_PATIENT
+
+gen x_pid_pde_sponsor = PID_PDE_SPONSOR
+
+gen x_flag_dmdc_pite_yyyyq_sponsor = FLAG_DMDC_PITE_YYYYQ_SERVICE
+
+gen x_flag_dmdc_pite_yyyyq_service = FLAG_DMDC_PITE_YYYYQ_SERVICE
+
+gen x_date_birth_pde = DATE_BIRTH
+
+gen x_patient_zip_pde = ZIP_PATIENT_PDE
+
+gen x_encounter_key = char(runiformint(65,90)) + char(runiformint(48,57))
+
+gen x_apptidno= char(runiformint(65,90)) + char(runiformint(48,57))
+
+gen x_pat_sex = ""
+gen psr = runiform()
+replace x_pat_sex = "F" if psr < 0.26
+replace x_pat_sex = "M" if psr >= 0.26
+drop psr
+
+gen x_admdisp = ""
+gen admr = runiform()
+replace x_admdisp = char(runiformint(65,70)) + char(runiformint(74,75)) if admr > 0.93
+drop admr
+ 
+gen x_asc1 = ""
+label variable x_asc1 "always missing"
+
+gen x_asc2 = ""
+gen ascr = runiform()
+replace x_asc2 = char(runiformint(48,57)) if ascr > 0.999
+drop ascr 
+
+gen x_asc3 = ""
+label variable x_asc3 "always missing"
+
+gen x_asc4 = ""
+gen ascr = runiform()
+replace x_asc4 = char(runiformint(48,57)) + char(runiformint(65,67)) if ascr > 0.993
+drop ascr 
+
+gen x_asc5 = ""
+gen ascr = runiform()
+replace x_asc5 = char(runiformint(48,57))+char(runiformint(65,66)) if ascr > 0.998
+drop ascr 
+
+gen x_asc6 = ""
+gen ascr = runiform()
+replace x_asc6 = char(runiformint(48,57))+char(runiformint(65,66)) if ascr > 0.995
+drop ascr 
+
+gen x_asc7 = ""
+gen ascr = runiform()
+replace x_asc7 = char(runiformint(48,57)) + char(runiformint(65,66)) if ascr > 0.9998
+drop ascr 
+
+gen x_asc8 = ""
+gen ascr = runiform()
+replace x_asc8 = char(runiformint(48,57)) if ascr > 0.9999
+drop ascr 
+
+gen x_asc9 = ""
+gen ascr = runiform()
+replace x_asc9 = char(runiformint(48,53)) if ascr > 0.9999
+drop ascr 
+
+gen x_asc10 = ""
+gen ascr = runiform()
+replace x_asc10 = char(runiformint(48,53)) if ascr > 0.9999
+drop ascr 
+
+gen x_asc11 = ""
+gen ascr = runiform()
+replace x_asc11 = char(runiformint(48,51)) if ascr > 0.99999
+drop ascr 
+
+gen x_asc12 = ""
+gen ascr = runiform()
+replace x_asc12 = char(runiformint(48,49)) if ascr > 0.99999
+drop ascr 
+
+gen x_asc13 = ""
+gen ascr = runiform()
+replace x_asc13 = char(runiformint(48,48)) if ascr > 0.99999
+drop ascr 
+
+	* also an ICD-9 from the above list of 200
+gen complaint = word("`proclist'", ceil(200*runiform()))
+
+
+* Random CPT from a list of 175
+local cptlist = "43640 43641 43644 43645 43770 43771 43772 43773 43774 43775 43800 43810 43820 43825 43840 43842 43843 43845 43846 43847 43848 43850 43855 43860 43865 43870 43880 43886 43887 43888 43286 43287 43288 11008 49491 49492 49495 49496 49500 49501 49505 49507 49520 49521 49525 49550 49553 49555 49557 49560 49561 49565 49566 49570 49572 49580 49582 49585 49587 49590 49600 49605 49606 49610 49611 49650 49651 49652 49653 49654 49655 49656 49657 49659 27125 27130 27132 27134 27137 27138 27236 33935 33945 58150 58152 58180 58200 58210 58240 58541 58542 58543 58544 58548 58550 58552 58553 58554 58570 58571 58572 58573 58951 58953 58954 58956 59525 58575 27438 27440 27441 27442 27443 27445 27446 27447 27486 27487 50340 50360 50365 50380 22220 22222 22224 22856 22857 22861 22862 22867 62287 62351 62380 63001 63003 63005 63011 63012 63015 63016 63017 63020 63030 63035 63040 63042 63045 63046 63047 63048 63050 63051 63055 63056 63064 63075 63077 63081 63082 63085 63086 63087 63088 63090 63091 63101 63102 63103 63170 63172 63173 63180 63182 63185 63190"
+local cptlength = 175
+
+	* There are 13 cpt and cpt_dx codes
+gen x_cpt_1 = word("`cptlist'", ceil(`cptlength'*runiform()))
+gen prcr1 = runiform()
+replace x_cpt_1 = "" if prcr1 > 0.8
+drop prcr1  
+gen x_cptdx_1 = ""
+gen prlcr1 = runiform()
+replace x_cptdx_1 = "" if prlcr1 > 0.2 & prlcr1 < 1
+replace x_cptdx_1 = "1" if prlcr1 > 0.005 & prlcr1 < 0.2
+replace x_cptdx_1 = "12" if prlcr1 > 0.004 & prlcr1 < 0.005
+replace x_cptdx_1 = "123" if prlcr1 > 0.003 & prlcr1 < 0.004
+replace x_cptdx_1 = "23" if prlcr1 > 0.0 & prlcr1 < 0.003
+replace x_cptdx_1 = "" if x_cpt_1 == ""
+drop prlcr1
+
+foreach nm of numlist 2(1)13{
+	* previous 
+	local prev = `nm'-1
+	* current 
+	gen x_cpt_`nm' = word("`cptlist'", ceil(`cptlength'*runiform()))
+	gen prcr`nm' = runiform()
+	replace x_cpt_`nm' = "" if prcr`nm' < ( (`nm'-1)/13 ) | x_cpt_`prev' == "" 
+	drop prcr`nm'
+	* location
+	gen x_cptdx_`nm' = ""
+	gen prlcr`nm' = runiform()
+	replace x_cptdx_`nm' = "" if prlcr`nm' > 0.2 & prlcr`nm' <= 1
+	replace x_cptdx_`nm' = "1" if prlcr`nm' > 0.005 & prlcr`nm' < 0.2
+	replace x_cptdx_`nm' = "12" if prlcr`nm' > 0.004 & prlcr`nm' < 0.005
+	replace x_cptdx_`nm' = "123" if prlcr`nm' > 0.003 & prlcr`nm' < 0.004
+	replace x_cptdx_`nm' = "23" if prlcr`nm' > 0.0 & prlcr`nm' < 0.003
+	replace x_cptdx_`nm' = "" if x_cpt_`nm' == ""
+	drop prlcr`nm'
+
+}
+
+gen x_dipscode = char(runiformint(65,84))
+
+* DIAGNOSES
+	* treat dx1 in this as admitting_diag in the previous.
+	* Others are numbered off by one: dx_n = DX_(N+1) above
+
+gen x_dx1 = ADMDX
+foreach nm of numlist 2(1)10{
+	local prev = `nm'-1
+	gen x_dx`nm' = DX`prev'
+}
+
+gen x_dxgrp = char(runiformint(1,20))
+replace x_dxgrp = "" if _n < 20
+
+gen x_MDC = char(runiformint(1,26))
+gen mdcr = runiform()
+replace x_MDC = "" if mdcr > 0.95
+drop mdcr
+
+gen x_encdate = DATE_ADMISSION
+
+gen x_apptstat = ""
+gen apsr = runiform()
+replace x_apptstat = "2" if apsr < 0.5
+replace x_apptstat = "5" if apsr >= 0.5 & apsr < 0.8
+replace x_apptstat = "7" if apsr >= 0.8 & apsr < 0.95
+replace x_apptstat = "6" if apsr > 0.95
+drop apsr 
+
+gen x_apptstat1 = x_apptstat
+label variable x_apptstat1 "ident to apptstat by construction"
+
+gen x_appttype = ""
+gen aptr = runiform()
+replace x_appttype = "EST" if aptr < 0.5
+replace x_appttype = "FTR$" if aptr >= 0.5 & aptr < 0.8
+replace x_appttype = "ROUT" if aptr >= 0.8 & aptr < 0.95
+replace x_appttype = "T-CON" if aptr > 0.95
+drop aptr
+
+gen x_dmisid = "0"+string(runiformint(100,550))
+
+gen x_hospstat = "0"
+gen hsr = runiform() 
+replace x_hospstat = "1" if hsr > 0.95
+drop hsr 
+
+gen x_mepr3 = "B" + char(runiformint(65,90)) + char(runiformint(65,90))
+
+gen x_meprscd = "B" + char(runiformint(65,90)) + char(runiformint(65,90)) + char(runiformint(65,90))
+
+gen x_mtf_par = "0" + string(runiformint(100, 260))
+
+gen x_mtr_prn = ""
+label variable x_mtr_prn "nearly always missing - values unknown"
+
+gen x_pcmnpi = char(runiformint(65,90)) + char(runiformint(65,90)) + char(runiformint(65,90)) + char(runiformint(48,57)) + char(runiformint(48,57))
+
+gen x_provdmisref = ""
+gen pmr = runiform()
+replace x_provdmisref = "0" + string(runiformint(100,500))
+drop pmr
+
+foreach nm of numlist 1(1)3{
+	gen x_provhipaa`nm' = ""
+	gen phr = runiform()
+	replace x_provhipaa`nm' = string(runiformint(100,200))+"0000X" if phr > 0.75
+	drop phr 
+}
+
+* NPI refs 2 and 3 take from NPI 1 so there will be overlap in the set of providers.
+
+gen x_provnpi1 = string(runiformint(1000,1300)) + char(runiformint(65,90)) + char(runiformint(65,90)) + char(runiformint(48,57))
+
+gen x_provnpi2 = ""
+gen prr = runiform()
+replace x_provnpi2 = x_provnpi1[_n-5] if prr > 0.85
+drop prr
+
+gen x_provnpi3 = ""
+gen prr = runiform()
+replace x_provnpi3 = x_provnpi1[_n+3] if prr > 0.98
+drop prr
+
+gen x_provnpiref = char(runiformint(65,90)) + char(runiformint(65,90)) + char(runiformint(65,90)) + char(runiformint(48,57)) + char(runiformint(48,57))
+
+gen x_provspec1 = string(runiformint(100, 300))
+
+gen x_provspec2 = string(runiformint(100, 300))
+gen psr = runiform()
+replace x_provspec2 = "" if psr > 0.76
+drop psr
+
+gen x_provspec3 = string(runiformint(100, 300))
+gen psr = runiform()
+replace x_provspec3 = "" if psr > 0.97
+drop psr
+
+
+gen x_provstat1 = char(runiformint(65,66)) + char(runiformint(65,67)) + char(runiformint(65,75))
+gen pvr = runiform()
+replace x_provstat1 = "" if pvr < 0.37
+drop pvr
+
+gen x_provstat2 = char(runiformint(65,66)) + char(runiformint(65,67)) + char(runiformint(65,75))
+gen pvr = runiform()
+replace x_provstat2 = "" if pvr < 0.37
+drop pvr
+
+gen x_provstat3 = char(runiformint(65,66)) + char(runiformint(65,67)) + char(runiformint(65,75))
+gen pvr = runiform()
+replace x_provstat3 = "" if pvr < 0.98
+drop pvr
+
+gen x_refnum = string(runiformint(100000,200000))
+gen rr = runiform()
+replace x_refnum = "" if rr > 0.47
+drop rr
+
+gen x_id = string(runiformint(1000000,2000000))
+
+
+
+* Split the two datasets and save 
+
+preserve 
+
+keep x_*
+
+rename x_* *
+
+save "`file_p'fake_dep_4.dta", replace 
+
+restore
+
+drop x_* 
+
+save "`file_p'fake_SIDR_DOD_Dep.dta", replace
+
+clear 
+
 
