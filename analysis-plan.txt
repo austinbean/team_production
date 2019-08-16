@@ -40,15 +40,17 @@ We cannot think of everything on this until we present at conferences and get fe
 		-XXX
 		
 		iii) Are sicker patients assigned to "higher quality" surgeons? This is a very crucial test since it directly addresses the concern of whether patients
-		have choice in selecting physicians. Include a surgeon measure of quality - past performance on mortality, spending, rank of medical school, total experience -- 
-		and test if coefficient on this is significant, conditioning on base, year and rank f.e.  -XXX 	
+		have choice in selecting physicians. Include a surgeon measure of quality - past performance on mortality, spending, rank of medical school [agree, and we'll need a rank for the armed
+		forces medical school, whatever it may be.], total experience -- and test if coefficient on this is significant, conditioning on base, year and rank f.e.  -XXX 	
 	
-	b) Surgeon control over transfers:
+	b) Surgeon control over transfers to new posts (as opposed to patient transfers):
 		i) It will be nice to have some descriptive stat like "xx% of transfers occur within 6 months of when the person is due for a transfer." Ideally we want this number to be close to 1,
 		but we should know this number. -XXX
 		
 		ii) Can we predict probability of transfer with high degree of certainty? Create a panel data organized around physician-years. Let DV be a dummy for transfer in a given year, and 
-		as controls include surgeon tenure in current posting and seniority/rank. What is the R-squared of this regression? Ideally we would like it to be high. Any other controls? -XXX
+		as controls include surgeon tenure in current posting and seniority/rank. What is the R-squared of this regression? Ideally we would like it to be high. Any other controls? -> One
+		informative control might be something like "region of medical school": if docs are getting transferred back to regions of the country where they have some existing connections this 
+		might suggest a degree of control over the process.
 		
 		iii) Are certain types of physicians more or less likely to receive an off-cycle transfer? To test this possibility, we could create a data file at the physician-transfer level i.e.
 		each transfer event is an osbervation here, so each physician will enter multiple times. Generate a dummy for the transfer being off-cycle (need to define). Use this as the DV.
@@ -59,19 +61,23 @@ We cannot think of everything on this until we present at conferences and get fe
 		We can replicate all three exercises above for patients as well.
 		
 	d) Is volume exogenously assigned to physicians? An important concern is that "better" surgeons will do more and complex surgeries, all else equal. i.e. the reverse causality argument.
-		i) Organize a physician-year panel (dropping years of transfers) and generate a dummy for the physician doing more than the median number of surgeries. Then estimate a model with 
+		i) Organize a physician-year panel (dropping years of transfers) and generate a dummy for the physician doing more than the median number of surgeries.  Aside from "higher than 
+		median number", something like "receives more transfers of more severely ill patients" may tell us that this surgeon is perceived to be better by peers. Then estimate a model with 
 		physician, base and year f.e., and physician rank. Test if physician f.e. are jointly significant.
 		
 		ii) Above we tested simply for volume, but we should also test for patient complexity. If we are able to construct a patient risk score, we can calculate a mean patient risk score for
-			each surgeon. Then use this as the DV and estimate a similar model as above.
+			each surgeon. Then use this as the DV and estimate a similar model as above.  Can potentially be done in the subset of patients who are transferred to a surgeon, though this number may be small.
 		
 		ii) Another way to test volume assignment is if physicians bounce around above and below the median (relative to their base) or remain consistently in the top or bottom half. If 
-		it is the latter, it would indicate that there is some non-random assignment going on. I'm not sure how to test this though. Ideas? - XXX 
+		it is the latter, it would indicate that there is some non-random assignment going on. I'm not sure how to test this though. Ideas?  Question: how much control do they have over their own
+		work hours?  Is there a seniority/rank based ability to take "better" shifts in, e.g., the ED?  
 
 2. Main tests of volume effect on outcomes: 
 	If the above tests are favorable, then we can proceed with confidence to the main estimation models and test if greater volume leads to better outcomes for patients. I think if we establish 
 	quasi-random assignment, we can simply estimate OLS models where some measure of lagged volume is on the RHS and patient outcomes are on the LHS. AB is probably more familiar with how these have
-	been estimated in previous literature.
+	been estimated in previous literature.  I did an IV probit with mortality as the outcome.  (IV probit conditions are (IIRC) stringent.)  LDV models are standard in the 
+	medical literature, but w/out any instruments or concern about causality, as I have noted.  Gaynor, Seider and Vogt (AER P&P - 2005, but there is a longer WP version I can send you) use a probit 
+	with a distance IV.  Gowrisankaran, Ho and Town (2006 WP, don't remember where it was published, but it is somewhere) do a probit too.  
 
 3. Test of learning dynamics 
 	We can think about these as we start seeing results on V-O. The nice thing about looking at learning is that it can be an independent paper by itself even if we get a null result 
