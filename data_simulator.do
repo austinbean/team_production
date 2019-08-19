@@ -9,7 +9,7 @@ set obs 100000
 
 local file_p = "/Users/tuk39938/Desktop/programs/team_production/"
 * local file_p = "/atul's/file/path/here"
-* local file_p = "/steve's/file/path/here"
+local file_p = "C:\Users\STEPHEN\Dropbox (Personal)\Army-Baylor\Research\Teams\team_production"
 
 * RENAME TO WHATEVER THE MERGE VARIABLE IS...
 
