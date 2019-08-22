@@ -45,20 +45,18 @@ We cannot think of everything on this until we present at conferences and get fe
 	
 	b) Surgeon control over transfers to new posts (as opposed to patient transfers):
 		i) It will be nice to have some descriptive stat like "xx% of transfers occur within 6 months of when the person is due for a transfer." Ideally we want this number to be close to 1,
-		but we should know this number. -XXX
+		but we should know this number. 
 		
 		ii) Can we predict probability of transfer with high degree of certainty? Create a panel data organized around physician-years. Let DV be a dummy for transfer in a given year, and 
 		as controls include surgeon tenure in current posting and seniority/rank. What is the R-squared of this regression? Ideally we would like it to be high. Any other controls? -> One
-		informative control might be something like "region of medical school": if docs are getting transferred back to regions of the country where they have some existing connections this 
+		informative control might be something like "location where they joined the military": if docs are getting transferred back to regions of the country where they have some existing connections this 
 		might suggest a degree of control over the process.
 		
-		iii) Are certain types of physicians more or less likely to receive an off-cycle transfer? To test this possibility, we could create a data file at the physician-transfer level i.e.
-		each transfer event is an osbervation here, so each physician will enter multiple times. Generate a dummy for the transfer being off-cycle (need to define). Use this as the DV.
-		On the RHS, include various controls for the physician -- rank/seniority, tenure at current location, some measure of quality/skill, gender. Ideally we want coefficients on quality/skill
-		to be jointly non-significant and small relative to those on rank and tenure. -XXX
+		iii) Test if probability of transfer is different for physicians of high quality vs. low quality. A simple way to test this is to show that an indicator for being high quality 
+		predicts prob. of transfer (could be negative or positive effect).
 	
 	c) Patient control over transfers:
-		We can replicate all three exercises above for patients as well.
+		We can replicate all three exercises above for patients as well. --> Not required.
 		
 	d) Is volume exogenously assigned to physicians? An important concern is that "better" surgeons will do more and complex surgeries, all else equal. i.e. the reverse causality argument.
 		i) Organize a physician-year panel (dropping years of transfers) and generate a dummy for the physician doing more than the median number of surgeries.  Aside from "higher than 
@@ -70,7 +68,10 @@ We cannot think of everything on this until we present at conferences and get fe
 		
 		ii) Another way to test volume assignment is if physicians bounce around above and below the median (relative to their base) or remain consistently in the top or bottom half. If 
 		it is the latter, it would indicate that there is some non-random assignment going on. I'm not sure how to test this though. Ideas?  Question: how much control do they have over their own
-		work hours?  Is there a seniority/rank based ability to take "better" shifts in, e.g., the ED?  
+		work hours?  Is there a seniority/rank based ability to take "better" shifts in, e.g., the ED?. ON HOLD FOR NOW.
+
+		iii) Use the movers experiment to test if physicians volume throughput quickly shifts to the destination mean throughput after moving to a new base. this will suggest that physician
+		volume is largely driven by the base. Check Molitor (AEJ-P, 2018). 
 
 2. Main tests of volume effect on outcomes: 
 	If the above tests are favorable, then we can proceed with confidence to the main estimation models and test if greater volume leads to better outcomes for patients. I think if we establish 
