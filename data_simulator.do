@@ -22,11 +22,11 @@ label variable MERGE_VAR "MERGE ON THIS"
 * Variables:
 
 gen str12 PID_PDE_SPONSOR = ""  
-replace PID_PDE_SPONSOR = "PDE"+string(runiformint(500000,999999))
+replace PID_PDE_SPONSOR = "PDE"+char(runiformint(65,90)) + char(runiformint(65,90)) + char(runiformint(65,90)) + char(runiformint(48,57)) + char(runiformint(65,90)) + char(runiformint(65,90)) + char(runiformint(48,57)) + char(runiformint(48,57)) + char(runiformint(48,57))
 label variable PID_PDE_SPONSOR "" 
 
 gen str12 PID_PDE_PATIENT = ""  
-replace PID_PDE_PATIENT = "PDE"+string(runiformint(400000,999999))
+replace PID_PDE_PATIENT = "PDE"+char(runiformint(65,90)) + char(runiformint(65,90)) + char(runiformint(65,90)) + char(runiformint(48,57)) + char(runiformint(65,90)) + char(runiformint(65,90)) + char(runiformint(48,57)) + char(runiformint(48,57)) + char(runiformint(48,57))
 label variable PID_PDE_PATIENT "" 
 
 gen str11 FLAG_DMDC_PITE_YYYYQ_SPONSOR = "NOT SPONSOR"  
@@ -558,6 +558,18 @@ drop star
 label variable SOURCE_TABLE "" 
 
 
+* Make some patients appear more than once.
+
+gen repeatr = runiform()
+	replace PID_PDE_PATIENT = PID_PDE_PATIENT[_n-1] if repeatr > 0.7
+	bysort PID_PDE_PATIENT: gen ctr = _n 
+	replace PID_PDE_PATIENT = PID_PDE_PATIENT[_n-1] if ctr[_n-1] == 2
+	
+	replace PID_PDE_PATIENT = PID_PDE_PATIENT[_n-1] if repeatr < 0.7 & repeatr > 0.6
+	drop ctr repeatr
+	
+
+
 * ADDING THE SECOND FILE  
 	* direct link: https://github.com/austinbean/team_production/blob/d41689429cd61450366e2d4d509bc8d872370357/codebook.log#L3067
 	* this will generate from the first file so that the merging process is sensible
@@ -816,6 +828,7 @@ replace x_refnum = "" if rr > 0.47
 drop rr
 
 gen x_id = string(runiformint(1000000,2000000))
+
 
 
 
