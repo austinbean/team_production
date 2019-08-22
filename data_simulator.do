@@ -7,6 +7,8 @@ set seed 41
 *  observation numbers
 set obs 100000
 
+
+* COMMENT OUT THE TWO WHICH ARE NOT YOURS TO RUN!
 local file_p = "/Users/tuk39938/Desktop/programs/team_production/"
 local file_p = "C:\Users\atulgup\Dropbox (Penn)\Projects\Teams\team_production"
 local file_p = "C:\Users\STEPHEN\Dropbox (Personal)\Army-Baylor\Research\Teams\team_production"
