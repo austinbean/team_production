@@ -1,0 +1,44 @@
+1. CAPER
+The Combined Ambulatory Provider Encounter Records. These are the military
+equivalent of physician billing. It is broken into two files.
+
+CAPER - Patient - This file contains information about the patient encounter
+including diagnosis and CPT codes.
+
+CAPER - Business - This includes all of the cost data about a visit including 
+RVU's broken down multiple ways. Keep in mind there are no malpractice RVU's
+in the military system.
+
+2. SIDR 
+The Standard Inpatient Data Record - These are the military's version of facility
+charges. They include the ICD-9/10 diagnosis and procedure codes
+
+3. Active Duty Master Files
+These are the personnel records for Active Duty personnel broken down into two file -
+one for Army and one for all other services. They include where someone was 
+assigned, where someone actually did their work (for instance, when I was in school
+I was assigned to a student detachment in San Antonio with duty in Philadelphia). They
+also include demographic information such as race, rank group and education.
+
+4. Tricare Encounter Data
+These are claims from the purchased care network. I've never worked with Medicare data
+but I would imagine they are very similar. It's broken down into two files as well - one for
+facility charges (TED-Institutional) and one for provider charges (TED-Non-Institutional)
+
+5. Enrollment File
+Not very granular and only applies to military dependents. Active duty are required to be enrolled in the HMO option (Tricaer Prime).
+I observe the dates when someone is enrolled in TRICARE and their plan choice.
+The actual enrollment file that I don't have access to yet has
+much more information including the patient PCP and clinic. This information is included
+in the CAPER - Patient file but can only be observed when someone seeks care. For the military population
+this isn't a big problem because some care is required annually.
+
+6. PID - NPI Crosswalk
+This file provides a crosswalk between provider NPI's and military ID's so that I can find their
+personnel files. It is incomplete - only going back to mid 2012. Anyone that left the military prior to
+then I cannot match. I have about an 80% match rate overall that degrades the farther back I go. I am hopeful
+to have a better crosswalk in the somewhat near future. 
+
+So far I've uploaded codebooks for the CAPER files, SIDR and the Active Duty Master Files. I don't
+particularly think we're going to use the other files much. I can upload them if we need them though.
+
