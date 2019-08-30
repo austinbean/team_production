@@ -61,17 +61,29 @@ local file_p = "/Users/tuk39938/Desktop/programs/team_production/"
 		- Reshape to wide
 		- Measure distance between subsequent admissions
 		- Generate an indicator for the later when the earlier one is "of interest" and the readmission is within the threshold
-	- Current: combine this set of indicators.
+	- Current project: combine this set of indicators.
 	- Very happy to hear about more efficient ways to solve this problem!
 	*/
 	local max_readmit = 10
 	foreach day_threshold of numlist 30 60 90{ 
 		foreach strt of numlist 1(1)`max_readmit'{
 			foreach next of numlist 2(1)`max_readmit'{
-				gen readmit_`strt'_`next'_`day_threshold' = 1 if DATE_ADMISSION`next' - DATE_ADMISSION`strt' <= `day_threshold' & of_interest`strt' == 1
+				gen readmit_`day_threshold'f`strt't`next' = 1 if DATE_ADMISSION`next' - DATE_ADMISSION`strt' <= `day_threshold' & of_interest`strt' == 1
 			}
 		} 
 	}
+	
+	
+	* Next step... probably a reshape, maybe twice.  
+		* so far this does just 30 days of the FIRST admission, but there's a pattern.
+	keep PID_PDE_PATIENT DATE_ADMISSION* of_interest* readmit_30f1t*
+	
+	reshape long readmit_30f1t, i(PID_PDE_PATIENT) j(ctr)
+	
+		* NOT UNIQUELY IDENTIFYING HERE.
+	reshape long DATE_ADMISSION of_interest, i(PID_PDE_PATIENT readmit_30f1t) j(dates)
+	* This kind of works...
+	
 	
 	
 	
