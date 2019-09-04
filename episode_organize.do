@@ -195,7 +195,6 @@ use "`file_p'fake_SIDR_DOD_Dep.dta", clear
 		save "`file_p'num_follups_`day_threshold'd.dta", replace
 	}
 
-stop 
 	
 * Merge back to original:
 
