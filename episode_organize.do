@@ -1,17 +1,57 @@
 * Organize Episodes:
+	/*
+	README
+	- identifies "sentinel_events" according to a list of ICD-9's below under PROGRAM_CONSTANTS
+	- tracks those events and follow-up admissions (for any reason) w/in 30, 60 or 90 days (assigns to earliest sentinel event for if more than one)
+	- adds two variables for each of 30 60 90 day thresholds: 
+		- following_up_from_`day_threshold' - the date of the original visit to which the current record is a follow up.
+		- is_`day_threshold'_follow_up - an indicator which is 1 if the visit is a follow up to another w/in `day_threshold' days
+	- Creates a new file fake_SIDR_DOD_Dep_readmits.dta with these variables added.	
+	*/
+
 
 local file_p = "/Users/tuk39938/Desktop/programs/team_production/"
 *local file_p = "C:\Users\atulgup\Dropbox (Penn)\Projects\Teams\team_production"
 *local file_p = "C:\Users\STEPHEN\Dropbox (Personal)\Army-Baylor\Research\Teams\team_production"
 
 
- use "`file_p'fake_SIDR_DOD_Dep.dta", clear
+use "`file_p'fake_SIDR_DOD_Dep.dta", clear
+ 
+ 
+* COMMENTS:
+	/*
+	Solvable (probably) problem: catches readmission n+1 w/in threshold days of admission n *admission date*, rather than discharge date.  Perhaps not that important.  
+	
+	One (complicated) unresovled problem - Tracking follow-ups to different kinds of episodes, e.g., 
+		- patient has appendectomy, has two follow ups.
+		- patient also has heart surgery (later than appendectomy), has 3 follow ups.
+		- Imagine all visits within 90 days of appendectomy 
+		- If appendectomy and heart surgery are *both* sentinel events, then 
+		  all of those follow-ups are going to be assigned as follow-ups to 
+		  the appendectomy.
+		- In other words, this is not going to track separate sequences of follow-up 
+		  events by the original type of event.
+	One solution: If the file is run multiple times and saves separate output
+		  for a one-item list of sentinel events, then this isn't an issue.  
+		  
+	Another (probably impossible) problem - We have no way to know whether the follow up is "related"
+		- Imagine an appendectomy (sentinel event) followed by an unrelated brain surgery. 
+	*/
  
  
 * PROGRAM CONSTANTS
 	* LIST RELEVANT ICD-9's HERE
 	local sentinel_events = "V053 V3000 9955 V3001 640 7746 V290 7661 9983 V7219 V502 76528 7742 77989 7706 76519 77089 77931 769 76529 76518 9604 9915 V3101 605 9390 77181 76527"
-	* MAX number of times we see someone in the record -	
+	* MAX number of times we see someone in the record -
+		 * can get this by counting,
+		 /*
+			bysort PID_PDE_PATIENT: gen ctr = _n 
+			bysort PID_PDE_PATIENT: egen mxct = max(ctr)
+			summarize mxct, d 
+			local max_readmit = `r(max)'
+			drop mxct ctr 
+			di "`max_readmit'"
+		 */
 	local max_readmit = 10
 	
 	
@@ -25,7 +65,7 @@ local file_p = "/Users/tuk39938/Desktop/programs/team_production/"
 	drop DX*POA
 	rename ADMDX DX21
 	
-	* simulated data may permit unique patient to appear twice in one day -> Is this a real problem or not? 
+	* simulated data may permit unique patient to appear twice in one day  
 	* there are multiple single-day admissions, esp. for dependents, per Steve.
 	* create one record per patient-admission 
 	bysort PID_PDE_PATIENT DATE_ADMISSION: gen pctr = _n
@@ -62,51 +102,113 @@ local file_p = "/Users/tuk39938/Desktop/programs/team_production/"
 		- Measure distance between subsequent admissions
 		- Generate an indicator for the later when the earlier one is "of interest" and the readmission is within the threshold
 	- Current project: combine this set of indicators.
-	- Very happy to hear about more efficient ways to solve this problem!
+	- This will check for each visit N only visits numbered N+1, ..., Max_visits 
+	- This will check up to Max_visits - 1 (Max_visits is a patient-population-level parameter) 
 	*/
 	local max_readmit = 10
 	foreach day_threshold of numlist 30 60 90{ 
-		foreach strt of numlist 1(1)`max_readmit'{
-			foreach next of numlist 2(1)`max_readmit'{
+		local stop_at = `max_readmit'-1
+		
+		foreach strt of numlist 1(1)`stop_at'{
+			local from_next = `strt' + 1  
+		
+			foreach next of numlist `from_next'(1)`max_readmit'{
 				gen readmit_`day_threshold'f`strt't`next' = 1 if DATE_ADMISSION`next' - DATE_ADMISSION`strt' <= `day_threshold' & of_interest`strt' == 1
 			}
 		} 
 	}
 	
 	
-	* Next step... probably a reshape, maybe twice.  
-		* so far this does just 30 days of the FIRST admission, but there's a pattern.
-	keep PID_PDE_PATIENT DATE_ADMISSION* of_interest* readmit_30f1t*
+	* identify readmissions following the sentinel events  
+
+	local max_readmit = 10
+
+	foreach day_threshold of numlist 30 60 90{
+		local stop_at = `max_readmit'-1
+		
+		foreach vis of numlist 1(1)`stop_at'{
+		preserve
+
+			keep PID_PDE_PATIENT DATE_ADMISSION* of_interest`vis' readmit_`day_threshold'f`vis't*		
+			rename DATE_ADMISSION`vis' following_up_from_`vis'
+			label variable following_up_from_`vis' "number of visit to which present follows up"
+			rename of_interest`vis' of_interest 
+			reshape long DATE_ADMISSION readmit_`day_threshold'f`vis't, i(PID_PDE_PATIENT) j(followups)
+			keep if readmit_`day_threshold'f`vis't == 1
+			drop followups of_interest readmit_`day_threshold'f`vis't 
+			gen byte is_`day_threshold'_follow_up_`vis' = 1
+			label variable is_`day_threshold'_follow_up_`vis' "this visit is a `day_threshold' follow-up"
+				* this part saves a BUNCH of temporaries - they are removed in the next loop.
+			save "`file_p'follow_ups_`day_threshold'd_`vis'vis.dta", replace
+			
+		restore 
+		}
+	}
+
 	
-	reshape long readmit_30f1t, i(PID_PDE_PATIENT) j(ctr)
-	
-		* NOT UNIQUELY IDENTIFYING HERE.
-	reshape long DATE_ADMISSION of_interest, i(PID_PDE_PATIENT readmit_30f1t) j(dates)
-	* This kind of works...
-	
-	
-	
-	
-/*	
-	bysort PID_PDE_PATIENT (DATE_ADMISSION): egen total_admits = count(_n) 
-	egen max_admits = max(total_admits)
-	
-	
-	
-	foreach nm of numlist 30 60 90{
-		gen within_`nm' = 0
-		label variable within_`nm' "Readmissions w/in `nm'"
+	* Combine the follow-up visit data.  
+	foreach day_threshold of numlist 30 60 90{
+		local stop_at = `max_readmit'-1
+		
+		use "`file_p'follow_ups_`day_threshold'd_1vis.dta", clear
+		foreach nm of numlist 2(1)`stop_at'{
+			append using "`file_p'follow_ups_`day_threshold'd_`nm'vis.dta"
+
+				* if disk space or clutter in folders is a concern, uncomment the remove command which follows.
+			rm "`file_p'follow_ups_`day_threshold'd_`nm'vis.dta"
+		}
+		rm "`file_p'follow_ups_`day_threshold'd_1vis.dta"
+		
+		save "`file_p'follow_ups_`day_threshold'd.dta", replace
+	}
+
+* Clean up to prevent double assignment -> each double assigned visit will be assigned to the earliest sentinel event.  Note one difficulty w/ this under "comments" above
+
+	foreach day_threshold of numlist 30 60 90{
+		use "`file_p'follow_ups_`day_threshold'd.dta", clear
+		sort PID_PDE_PATIENT DATE_ADMISSION	
+		collapse (firstnm) following_up_from_* is_`day_threshold'_follow_up_* , by(PID_PDE_PATIENT DATE_ADMISSION)
+		reshape long following_up_from_ is_`day_threshold'_follow_up_,  i(PID_PDE_PATIENT DATE_ADMISSION) j(ctt)
+		keep if is_`day_threshold'_follow_up_ != .
+		bysort PID_PDE_PATIENT DATE_ADMISSION: gen adct = _n
+		drop if adct > 1
+		drop adct ctt 
+		rename following_up_from_ following_up_from_`day_threshold'
+		rename is_`day_threshold'_follow_up_ is_`day_threshold'_follow_up
+		label variable following_up_from_`day_threshold' "orig. date to which this is `day_threshold' follow-up"
+		label variable is_`day_threshold'_follow_up "`day_threshold' day follow up from earlier"
+		save "`file_p'follow_ups_`day_threshold'd.dta", replace
 	}
 	
-	summarize max_admits, meanonly
-	local max_ad = `r(mean)'
-	foreach i of numlist 1(1)10{
-		bysort PID_PDE_PATIENT (DATE_ADMISSION): gen ddiff_`i' = 1 if DATE_ADMISSION[_n+`k'] - DATE_ADMISSION <= 30
+* Identify those visits which have follow ups:
+	foreach day_threshold of numlist 30 60 90{
+		use "`file_p'follow_ups_`day_threshold'd.dta", clear
+		sort PID_PDE_PATIENT following_up_from_`day_threshold'
+		bysort PID_PDE_PATIENT following_up_from_`day_threshold' (DATE_ADMISSION): gen follow_ups = _n 
+		reshape wide DATE_ADMISSION, i(PID_PDE_PATIENT following_up_from_`day_threshold') j(follow_ups)
+		rename is_`day_threshold'_follow_up has_`day_threshold'_follow_ups
+		label variable has_`day_threshold'_follow_ups "admission has `day_threshold' day follow ups"
+		rename DATE_ADMISSION* follow_up*_`day_threshold'
+		rename following_up_from_`day_threshold' DATE_ADMISSION 
+		egen num_`day_threshold'_follow_ups = rownonmiss(follow_up*)
+		label variable num_`day_threshold'_follow_ups "has N follow ups w/in `day_threshold' d"
+		save "`file_p'num_follups_`day_threshold'd.dta", replace
+	}
+
+	
+* Merge back to original:
+
+	use "`file_p'fake_SIDR_DOD_Dep.dta", clear
+	foreach day_threshold of numlist 30 60 90{
+		merge m:1 PID_PDE_PATIENT DATE_ADMISSION using "`file_p'follow_ups_`day_threshold'd.dta", nogen
+		replace is_`day_threshold'_follow_up = 0 if is_`day_threshold'_follow_up == .
 	}
 	
-	
-		* TODO - this isn't right because it only checks the next one.  
-	foreach days of numlist 30 60 90 {
-	bysort PID_PDE_PATIENT (DATE_ADMISSION): gen readmit_`days' if DATE_ADMISSION[_n+1] - DATE_ADMISSION <= `days'
+	foreach day_threshold of numlist 30 60 90{
+		merge m:1 PID_PDE_PATIENT DATE_ADMISSION using "`file_p'num_follups_`day_threshold'd.dta", nogen
+		replace has_`day_threshold'_follow_ups = 0 if has_`day_threshold'_follow_ups == .
 	}
-*/
+
+	save "`file_p'fake_SIDR_DOD_Dep_readmits.dta", replace
+	
+	
