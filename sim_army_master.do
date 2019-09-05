@@ -4,7 +4,8 @@
 FIRST CREATED: SEPT 4, 2019
 LAST UPDATED : SEPT 5, 2019
 
-LAST UPDATE: MIMIC TRANSFER PATTERNS IN REAL DATA (CENTERED AROUND 3 YEAR TENURE AT A UNIT/ZIP)
+LAST UPDATE: MIMIC TRANSFER PATTERNS IN REAL DATA (CENTERED AROUND 3 YEAR TENURE AT A UNIT/ZIP). MAKE CENSORING
+			VS ATTRITION EXPLICIT. MAKE SNAPSHOT FREQUENCY QUARTERLY.
 		BY : AG
 */
 
@@ -103,9 +104,13 @@ label variable DATE_BIRTH_PDE "Patient DOB"
 
 *Year of joining army;
 gen yr_frst = runiformint(1998,2016)
-gen yr_last = runiformint(1998,2016)
 replace yr_frst = year(DATE_BIRTH_PDE)+18 if yr_frst < (year(DATE_BIRTH_PDE)+18)
-replace yr_last = yr_frst+1 if yr_last<(yr_last+1)
+
+*Year of leaving the army;
+gen tot_ten = runiformint(1,10) if unif >= 0.5
+gen yr_last = yr_frst + tot_ten if unif >= 0.5
+replace yr_last = min(yr_last,2017) if unif >= 0.5
+gen mth_last = runiformint(1,10) if unif >= 0.5
 
 gen double AFMS_BASE_DT =0
 gen u_mth = runiformint(1,12)
@@ -160,9 +165,9 @@ gen ten_rand = runiform(-1,1)
 
 *Now create variables that vary within individuals;
 
-drop unif yr_frst yr_last
+drop unif yr_frst
 
-expand 25
+expand 50
 
 gen unif = runiform()
 
@@ -189,11 +194,14 @@ drop qtr_snp_dt snap_frst_yr
 *some individuals have 25 obs, others have fewer.
 drop if SNPSHT_DT < AFMS_BASE_DT  
 
-drop if SNPSHT_DT > td(31dec2017)
+drop if SNPSHT_DT > td(31dec2017) & yr_last==.
+drop if SNPSHT_DT > mdy(mth_last,1,yr_last) & yr_last!=.
 
 sort PID_PDE SNPSHT_DT
 
 by PID_PDE: gen record = _n
+
+drop yr_last mth_last tot_ten
 
 *Create tenure var and accordingly, transfer dummy, will help merge in assigned unit and zip code;
 
@@ -288,5 +296,3 @@ drop unif
 save "`file_p'fake_army_master.dta", replace 
 
 *clear 
-
-
