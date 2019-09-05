@@ -10,6 +10,9 @@
 	*/
 
 
+	* TODO - remove extra local constants below.  Don't keep at 10.
+	
+	
 local file_p = "/Users/tuk39938/Desktop/programs/team_production/"
 *local file_p = "C:\Users\atulgup\Dropbox (Penn)\Projects\Teams\team_production"
 *local file_p = "C:\Users\STEPHEN\Dropbox (Personal)\Army-Baylor\Research\Teams\team_production"
@@ -98,13 +101,13 @@ use "`file_p'fake_SIDR_DOD_Dep.dta", clear
 	- Need to identify ALL readmissions within some set of thresholds, here 30 60 and 90 days
 	- Any individual may have many or none within the thresholds.
 	- Thus... 
-		- Reshape to wide
 		- Measure distance between subsequent admissions
 		- Generate an indicator for the later when the earlier one is "of interest" and the readmission is within the threshold
-	- Current project: combine this set of indicators.
 	- This will check for each visit N only visits numbered N+1, ..., Max_visits 
 	- This will check up to Max_visits - 1 (Max_visits is a patient-population-level parameter) 
+	- Later: combine and check to make sure there is a "gap" between sentinel events and prior admissions.
 	*/
+* DELETE
 	local max_readmit = 10
 	foreach day_threshold of numlist 30 60 90{ 
 		local stop_at = `max_readmit'-1
@@ -119,8 +122,8 @@ use "`file_p'fake_SIDR_DOD_Dep.dta", clear
 	}
 	
 	
-	* identify readmissions following the sentinel events  
-
+* identify readmissions following the sentinel events  
+* DELETE 
 	local max_readmit = 10
 
 	foreach day_threshold of numlist 30 60 90{
@@ -146,7 +149,7 @@ use "`file_p'fake_SIDR_DOD_Dep.dta", clear
 	}
 
 	
-	* Combine the follow-up visit data.  
+* Combine the follow-up visit data. 
 	foreach day_threshold of numlist 30 60 90{
 		local stop_at = `max_readmit'-1
 		
@@ -161,6 +164,8 @@ use "`file_p'fake_SIDR_DOD_Dep.dta", clear
 		
 		save "`file_p'follow_ups_`day_threshold'd.dta", replace
 	}
+	
+stop 
 
 * Clean up to prevent double assignment -> each double assigned visit will be assigned to the earliest sentinel event.  Note one difficulty w/ this under "comments" above
 
