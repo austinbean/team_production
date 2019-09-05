@@ -561,16 +561,34 @@ label variable SOURCE_TABLE ""
 
 
 * Make some patients appear more than once.
+	* Also: dates of admission / disposition will now change so that admissions are w/in 180 days
+	
 
 gen repeatr = runiform()
+	sort PID_PDE_PATIENT
+	* "second visit" -> this can create a sequence of three if there are two repeatr > 0.7
 	replace PID_PDE_PATIENT = PID_PDE_PATIENT[_n-1] if repeatr > 0.7
 	bysort PID_PDE_PATIENT: gen ctr = _n 
+	* "third visit"
 	replace PID_PDE_PATIENT = PID_PDE_PATIENT[_n-1] if ctr[_n-1] == 2
-	
-	replace PID_PDE_PATIENT = PID_PDE_PATIENT[_n-1] if repeatr < 0.7 & repeatr > 0.6
+	drop ctr 
+	bysort PID_PDE_PATIENT: gen ctr = _n 
+	* "second visit" -> change dates relative to previous.
+	replace DATE_ADMISSION = DATE_DISPOSITION[_n-1] + runiformint(0,180) if ctr == 2
+	replace DATE_DISPOSITION = DATE_ADMISSION + runiformint(1,20) if ctr == 2
+	* "third visit"
+	replace DATE_ADMISSION = DATE_DISPOSITION[_n-1] + runiformint(0,180) if ctr == 3
+	replace DATE_DISPOSITION = DATE_ADMISSION + runiformint(1,20) if ctr == 3
+	* UN-FIXED: DATE_STARTPROC1 DATE_STOPPROC1 etc... These might be wrong.  
+
+	* add some two-visit patients, but don't overwrite three-visit patients changed above. 
+	replace PID_PDE_PATIENT = PID_PDE_PATIENT[_n-1] if repeatr < 0.7 & repeatr > 0.6 & ctr[_n-1] != 3 
+	drop ctr 
+	bysort PID_PDE_PATIENT: gen ctr = _n 
+	replace DATE_ADMISSION = DATE_DISPOSITION[_n-1] + runiformint(0,180) if ctr == 2
+	replace DATE_DISPOSITION = DATE_ADMISSION + runiformint(1,20) if ctr == 2
 	drop ctr repeatr
 	
-
 
 * ADDING THE SECOND FILE  
 	* direct link: https://github.com/austinbean/team_production/blob/d41689429cd61450366e2d4d509bc8d872370357/codebook.log#L3067
