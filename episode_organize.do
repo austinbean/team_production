@@ -56,7 +56,8 @@ use "`file_p'fake_SIDR_DOD_Dep.dta", clear
 			di "`max_readmit'"
 		 */
 	local max_readmit = 10
-	
+	local barrier = 90 // There is only a single barrier value - 90 days.
+
 	
 
 * Generate list of patients with relevant admissions	
@@ -96,22 +97,20 @@ use "`file_p'fake_SIDR_DOD_Dep.dta", clear
 	bysort PID_PDE_PATIENT (DATE_ADMISSION): gen admit_counter = _n 
 	reshape wide DATE_ADMISSION of_interest, i(PID_PDE_PATIENT) j(admit_counter)
 	
-* Can potentially do sorting and identifying here.	
+* Determine events which will be "lost" - not follow-ups on their own since they occur within 'barrier' days of a sentinel event.  Is this getting it exactly right?  
+* these events shouldn't initiate new chains.  	
 	* Reminder: check if visit 1 is more than barrier days from the start.
-	* Why not identify follow-ups here too?
-* DELETE 
-	local max_readmit = 10
-	local barrier = 90 // There is only a single barrier value - 90 days.
+	gen lost = 0
 	foreach curr_vis of numlist 2(1)`max_readmit'{
 	local prev_vis = `curr_vis'-1
-	gen lost`curr_vis' = 0
+	
 		foreach prior of numlist 1(1)`prev_vis'{			
-			replace lost`curr_vis' = 1 if (DATE_ADMISSION`curr_vis' - DATE_ADMISSION`prior' < `barrier') & (of_interest`prior' == 1) & (of_interest`curr_vis' == 1)
+			replace lost = 1 if (DATE_ADMISSION`curr_vis' - DATE_ADMISSION`prior' < `barrier') & (of_interest`prior' == 1) & (of_interest`curr_vis' == 1)
 		}
 	}
 	* to look at results, uncomment: 
 	* reshape long DATE_ADMISSION lost of_interest, i(PID_PDE_PATIENT) j(vctr)
-	
+
 	/*
 	Next loop looks (and may be) very inefficient, but...
 	- Need to identify ALL readmissions within some set of thresholds, here 30 60 and 90 days
@@ -121,11 +120,10 @@ use "`file_p'fake_SIDR_DOD_Dep.dta", clear
 		- Generate an indicator for the later when the earlier one is "of interest" and the readmission is within the threshold
 	- This will check for each visit N only visits numbered N+1, ..., Max_visits 
 	- This will check up to Max_visits - 1 (Max_visits is a patient-population-level parameter) 
-	- If a visit is "lost" (< 'barrier' days from a sentinel event), it is not a follow up -> does that get it right?  
+	- If a visit is "lost" (< 'barrier' days from a sentinel event), it will not initiate a new chain of follow-ups   
 	- Later: combine and check to make sure there is a "gap" between sentinel events and prior admissions.
 	*/
-* DELETE
-	local max_readmit = 10
+
 	foreach day_threshold of numlist 30 60 90{ 
 		local stop_at = `max_readmit'-1
 		
@@ -133,27 +131,29 @@ use "`file_p'fake_SIDR_DOD_Dep.dta", clear
 			local from_next = `strt' + 1  
 		
 			foreach next of numlist `from_next'(1)`max_readmit'{
-				gen readmit_`day_threshold'f`strt't`next' = 1 if DATE_ADMISSION`next' - DATE_ADMISSION`strt' <= `day_threshold' & of_interest`strt' == 1 & lost`strt' != 1
+				gen readmit_`day_threshold'f`strt't`next' = 1 if DATE_ADMISSION`next' - DATE_ADMISSION`strt' <= `day_threshold' & of_interest`strt' == 1 & lost != 1
 			}
 		} 
 	}
-stop
+
 	
 * identify readmissions following the sentinel events  
 * DELETE 
 	local max_readmit = 10
 
+	* SO FAR NOT SEING ANY LOSTS -> might make sense since we keep if readmit_`day_threshold' == 1 below.  
+	
 	foreach day_threshold of numlist 30 60 90{
 		local stop_at = `max_readmit'-1
 		
 		foreach vis of numlist 1(1)`stop_at'{
 		preserve
-
-			keep PID_PDE_PATIENT DATE_ADMISSION* of_interest`vis' readmit_`day_threshold'f`vis't* 	
+				* Is this going to skip 'lost' events properly?  
+			keep PID_PDE_PATIENT DATE_ADMISSION* of_interest`vis' readmit_`day_threshold'f`vis't* lost
 			rename DATE_ADMISSION`vis' following_up_from_`vis'
 			label variable following_up_from_`vis' "date of visit to which present follows up"
 			rename of_interest`vis' of_interest 
-			reshape long DATE_ADMISSION readmit_`day_threshold'f`vis't, i(PID_PDE_PATIENT) j(followups)
+			reshape long DATE_ADMISSION readmit_`day_threshold'f`vis't , i(PID_PDE_PATIENT) j(followups)
 			keep if readmit_`day_threshold'f`vis't == 1
 			drop followups of_interest readmit_`day_threshold'f`vis't 
 			gen byte is_`day_threshold'_follow_up_`vis' = 1
@@ -165,7 +165,7 @@ stop
 		}
 	}
 
-	
+	stop 
 * Combine the follow-up visit data. 
 	foreach day_threshold of numlist 30 60 90{
 		local stop_at = `max_readmit'-1
