@@ -2,10 +2,11 @@
 * Generates simulated file for the army personnel master file.
 
 FIRST CREATED: SEPT 4, 2019
-LAST UPDATED : SEPT 5, 2019
+LAST UPDATED : SEPT 6, 2019
 
 LAST UPDATE: MIMIC TRANSFER PATTERNS IN REAL DATA (CENTERED AROUND 3 YEAR TENURE AT A UNIT/ZIP). MAKE CENSORING
-			VS ATTRITION EXPLICIT. MAKE SNAPSHOT FREQUENCY QUARTERLY.
+			VS ATTRITION EXPLICIT. MAKE SNAPSHOT FREQUENCY QUARTERLY. START IN 2001 AND END IN 2016. MAKE PEOPLE
+			JOIN BETWEEN AGES 18 AND 25.
 		BY : AG
 */
 
@@ -17,6 +18,15 @@ set seed 41
 *local file_p = "/Users/tuk39938/Desktop/programs/team_production/"
 local file_p = "C:\Users\atulgup\Dropbox (Penn)\Projects\Teams\team_production\"
 *local file_p = "C:\Users\STEPHEN\Dropbox (Personal)\Army-Baylor\Research\Teams\team_production"
+
+local samp_start_yr 2001
+local samp_end_yr 2016
+local bday_old 1960
+local bday_yng 1995
+local army_join_old 1990
+local snap_last td(31dec2016)
+local join_frst 18
+local join_last 25
 
 *************;
 *Create list of unit IDs;
@@ -95,21 +105,21 @@ label variable JSVC_SPSE_PID_PDE "spouse id"
 *Date of birth;
 gen double DATE_BIRTH_PDE = 0
 gen u_mth = runiformint(1,12)
-gen u_yr = runiformint(1965,1995)
-replace DATE_BIRTH_PDE = mdy(u_mth,1,u_yr)
+gen birth_yr = runiformint(`bday_old',`bday_yng')
+replace DATE_BIRTH_PDE = mdy(u_mth,1,birth_yr)
 replace DATE_BIRTH_PDE = . if unif<=0.001
-drop u_mth u_yr
+drop u_mth 
 format DATE_BIRTH_PDE %td
 label variable DATE_BIRTH_PDE "Patient DOB" 
 
 *Year of joining army;
-gen yr_frst = runiformint(1998,2016)
-replace yr_frst = year(DATE_BIRTH_PDE)+18 if yr_frst < (year(DATE_BIRTH_PDE)+18)
+gen yr_frst = runiformint((birth_yr + `join_frst'),(birth_yr + `join_last'))
+replace yr_frst = min(yr_frst,`samp_end_yr')
 
-*Year of leaving the army;
+*Year of leaving the army -- only half the people have left by the end of the sample;
 gen tot_ten = runiformint(1,10) if unif >= 0.5
 gen yr_last = yr_frst + tot_ten if unif >= 0.5
-replace yr_last = min(yr_last,2017) if unif >= 0.5
+replace yr_last = min(yr_last,`samp_end_yr') if unif >= 0.5
 gen mth_last = runiformint(1,10) if unif >= 0.5
 
 gen double AFMS_BASE_DT =0
@@ -120,7 +130,7 @@ format AFMS_BASE_DT %td
 drop u_mth
 
 *year of first snapshot;
-gen snap_frst_yr = max(yr_frst,2010)
+gen snap_frst_yr = max(yr_frst,`samp_start_yr')
 
 *Education level;
 local edu_lev = "11 12 14 15 18 20 22 23 24 26 29 31 32 33 35 37 39 40 42 44"
@@ -165,9 +175,9 @@ gen ten_rand = runiform(-1,1)
 
 *Now create variables that vary within individuals;
 
-drop unif yr_frst
+drop unif yr_frst birth_yr
 
-expand 50
+expand 75
 
 gen unif = runiform()
 
@@ -194,7 +204,7 @@ drop qtr_snp_dt snap_frst_yr
 *some individuals have 25 obs, others have fewer.
 drop if SNPSHT_DT < AFMS_BASE_DT  
 
-drop if SNPSHT_DT > td(31dec2017) & yr_last==.
+drop if SNPSHT_DT > `snap_last' & yr_last==.
 drop if SNPSHT_DT > mdy(mth_last,1,yr_last) & yr_last!=.
 
 sort PID_PDE SNPSHT_DT
@@ -290,8 +300,6 @@ gen double PN_AGE_QY = int((SNPSHT_DT - DATE_BIRTH_PDE)/365.25)
 replace PN_AGE_QY=. if DATE_BIRTH_PDE==.
 
 drop unif
-
-*save
 
 save "`file_p'fake_army_master.dta", replace 
 
