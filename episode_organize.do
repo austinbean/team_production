@@ -13,7 +13,7 @@
 	* TODO - remove extra local constants below.  Don't keep at 10.
 	
 	
-local file_p = "/Users/tuk39938/Desktop/programs/team_production/"
+local file_p = "/Users/austinbean/Desktop/programs/team_production/"
 *local file_p = "C:\Users\atulgup\Dropbox (Penn)\Projects\Teams\team_production"
 *local file_p = "C:\Users\STEPHEN\Dropbox (Personal)\Army-Baylor\Research\Teams\team_production"
 
@@ -168,6 +168,14 @@ use "`file_p'fake_SIDR_DOD_Dep.dta", clear
 stop 
 
 * Clean up to prevent double assignment -> each double assigned visit will be assigned to the earliest sentinel event.  Note one difficulty w/ this under "comments" above
+	* Need to guarantee that the barrier condition is satisfied.
+	* only matters with multiple admits, will only hit those with more than one record
+	* need to reshape by record PID Date_admission, sort by Date_admission, generate the min date associate with a record
+	* then for subsequent dates, if the min in one sequence fails barrier condition wrt previous, it can be a follow up itself or not.  
+	/*
+	Need to sort them, then compare the earliest date in one to the latest date in another BUT need to track
+	for each one whether it is of interest or not.  WTF.  Ugh.  
+	*/
 
 	foreach day_threshold of numlist 30 60 90{
 		use "`file_p'follow_ups_`day_threshold'd.dta", clear
