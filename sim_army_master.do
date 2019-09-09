@@ -2,9 +2,9 @@
 * Generates simulated file for the army personnel master file.
 
 FIRST CREATED: SEPT 4, 2019
-LAST UPDATED : X
+LAST UPDATED : SEPT 5, 2019
 
-LAST UPDATE: XX
+LAST UPDATE: MIMIC TRANSFER PATTERNS IN REAL DATA (CENTERED AROUND 3 YEAR TENURE AT A UNIT/ZIP)
 		BY : AG
 */
 
@@ -114,6 +114,9 @@ replace AFMS_BASE_DT = . if unif<=0.002
 format AFMS_BASE_DT %td
 drop u_mth
 
+*year of first snapshot;
+gen snap_frst_yr = max(yr_frst,2010)
+
 *Education level;
 local edu_lev = "11 12 14 15 18 20 22 23 24 26 29 31 32 33 35 37 39 40 42 44"
 local length = 20
@@ -151,6 +154,10 @@ replace RACE_CD = "003" if unif > 14.7/331 & unif <= 87.7/331
 replace RACE_CD = "004" if unif > 87.7/331 & unif <= 87.8/331
 replace RACE_CD = "005" if unif > 87.8/331 & unif <= 307.8/331
 
+*Initial tenure and transfer duration;
+gen initial = runiform(1,4)
+gen ten_rand = runiform(-1,1)
+
 *Now create variables that vary within individuals;
 
 drop unif yr_frst yr_last
@@ -159,22 +166,7 @@ expand 25
 
 gen unif = runiform()
 
-gen double SNPSHT_DT = 0
-gen u_mth = runiformint(1,12)
-gen u_yr = runiformint(2010,2017)
-replace SNPSHT_DT = mdy(u_mth,1,u_yr)
-format SNPSHT_DT %td
-drop u_mth u_yr
-label variable SNPSHT_DT "obs date" 
-
-*Keep only obs with snapshot dates after joining date for each person. This creates variation where 
-*some individuals have 25 obs, others have fewer.
-drop if SNPSHT_DT < AFMS_BASE_DT  
-
-sort PID_PDE SNPSHT_DT
-
-by PID_PDE: gen record = _n
-
+*Create military rank;
 gen str2 RANK_GRP_PDE = ""
 replace RANK_GRP_PDE = "EJ" if unif<=(150/331)
 replace RANK_GRP_PDE = "ES" if unif >(150/331) & unif<=(270/331)
@@ -183,6 +175,34 @@ replace RANK_GRP_PDE = "OS" if unif >(300/331) & unif<=(320/331)
 replace RANK_GRP_PDE = "WJ" if unif >(320/331) & unif<=(327/331)
 replace RANK_GRP_PDE = "WS" if unif >(327/331)
 
+*Create snapshot dates;
+gen qtr_snp_dt = yq(snap_frst_yr,1)
+bysort PID_PDE: replace qtr_snp_dt = qtr_snp_dt[_n-1] + 1 if _n>1
+
+gen double SNPSHT_DT = 0
+replace SNPSHT_DT = dofq(qtr_snp_dt)
+format SNPSHT_DT %td
+label variable SNPSHT_DT "obs date" 
+drop qtr_snp_dt snap_frst_yr
+
+*Keep only obs with snapshot dates after joining date for each person. This creates variation where 
+*some individuals have 25 obs, others have fewer.
+drop if SNPSHT_DT < AFMS_BASE_DT  
+
+drop if SNPSHT_DT > td(31dec2017)
+
+sort PID_PDE SNPSHT_DT
+
+by PID_PDE: gen record = _n
+
+*Create tenure var and accordingly, transfer dummy, will help merge in assigned unit and zip code;
+
+by PID_PDE: gen tenure = initial if _n==1
+by PID_PDE: replace tenure = cond(tenure[_n-1]>(3 + ten_rand),0,tenure[_n-1]) + 0.25 if _n>1
+
+gen xfer=0
+by PID_PDE: replace xfer=1 if tenure<tenure[_n-1]
+
 gen m_asg = runiformint(1,200)
 
 merge m:1 m_asg using `asgid'
@@ -190,7 +210,12 @@ drop if _m==2
 drop _m
 ren UIC_PDE ASG_UIC_PDE
 label variable ASG_UIC_PDE "assigned base" 
-replace ASG_UIC_PDE="" if unif<=0.002		
+
+sort PID_PDE record
+by PID_PDE: replace ASG_UIC_PDE="" if xfer==0
+by PID_PDE: replace ASG_UIC_PDE = ASG_UIC_PDE[_n-1] if xfer==0
+		
+*replace ASG_UIC_PDE="" if unif<=0.002		
 
 ren m_asg m_duty
 
@@ -199,9 +224,12 @@ drop if _m==2
 drop _m
 ren UIC_PDE DTY_UIC_PDE
 label variable DTY_UIC_PDE "actual base" 
-replace DTY_UIC_PDE = "" if unif <= 0.015		
 
-drop m_duty
+sort PID_PDE record
+by PID_PDE: replace DTY_UIC_PDE="" if xfer==0
+by PID_PDE: replace DTY_UIC_PDE = DTY_UIC_PDE[_n-1] if xfer==0
+
+replace DTY_UIC_PDE = "" if unif <= 0.015		
 
 gen m_asgzip = runiformint(1,2000)
 
@@ -210,6 +238,11 @@ drop if _m==2
 drop _m
 
 ren zip ZIP_CODE_PDE_ASG_UNT_LOC
+
+sort PID_PDE record
+replace ZIP_CODE_PDE_ASG_UNT_LOC = "" if xfer==0
+by PID_PDE: replace ZIP_CODE_PDE_ASG_UNT_LOC = ZIP_CODE_PDE_ASG_UNT_LOC[_n-1] if xfer==0
+
 replace ZIP_CODE_PDE_ASG_UNT_LOC = "" if unif<=0.08		
 label variable ZIP_CODE_PDE_ASG_UNT_LOC "assigned base zip" 
 
@@ -222,10 +255,18 @@ drop _m
 replace zip = ZIP_CODE_PDE_ASG_UNT_LOC if DTY_UIC_PDE == ASG_UIC_PDE
 
 ren zip ZIP_CODE_PDE_DTY_UNT_LOC
+
+sort PID_PDE record
+replace ZIP_CODE_PDE_DTY_UNT_LOC = "" if xfer==0
+by PID_PDE: replace ZIP_CODE_PDE_DTY_UNT_LOC = ZIP_CODE_PDE_DTY_UNT_LOC[_n-1] if xfer==0
+
 replace ZIP_CODE_PDE_DTY_UNT_LOC = "" if unif<=0.08		
 label variable ZIP_CODE_PDE_DTY_UNT_LOC "actual base zip" 
 
-drop m_dutyzip
+*Finally set xfer for first obs within individual to zero;
+by PID_PDE: replace xfer=0 if _n==1
+
+drop m_dutyzip m_duty initial ten_rand xfer tenure
 
 gen double AFMS_MN_QY = 0
 replace AFMS_MN_QY = int((SNPSHT_DT - AFMS_BASE_DT)/30)
