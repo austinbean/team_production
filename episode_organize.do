@@ -13,7 +13,7 @@
 	* TODO - remove extra local constants below.  Don't keep at 10.
 	* TODO - check whether first visit is w/in "barrier" days of min visit in date.	
 	
-local file_p = "/Users/austinbean/Desktop/programs/team_production/"
+local file_p = "/Users/tuk39938/Desktop/programs/team_production/"
 *local file_p = "C:\Users\atulgup\Dropbox (Penn)\Projects\Teams\team_production"
 *local file_p = "C:\Users\STEPHEN\Dropbox (Personal)\Army-Baylor\Research\Teams\team_production"
 
@@ -98,13 +98,14 @@ use "`file_p'fake_SIDR_DOD_Dep.dta", clear
 	reshape wide DATE_ADMISSION of_interest, i(PID_PDE_PATIENT) j(admit_counter)
 	
 * Determine events which will be "lost" - not follow-ups on their own since they occur within 'barrier' days of a sentinel event.  Is this getting it exactly right?  
-* these events shouldn't initiate new chains.  	
+	* these events shouldn't initiate new chains.  	But they are potentially *follow-ups* to earlier events.
 	* Reminder: check if visit 1 is more than barrier days from the start.
 	gen lost = 0
 	foreach curr_vis of numlist 2(1)`max_readmit'{
 	local prev_vis = `curr_vis'-1
 	
-		foreach prior of numlist 1(1)`prev_vis'{			
+		foreach prior of numlist 1(1)`prev_vis'{	
+			* tags lost = 1 if there is any previous of interest visit < barrier days. 
 			replace lost = 1 if (DATE_ADMISSION`curr_vis' - DATE_ADMISSION`prior' < `barrier') & (of_interest`prior' == 1) & (of_interest`curr_vis' == 1)
 		}
 	}
@@ -131,12 +132,14 @@ use "`file_p'fake_SIDR_DOD_Dep.dta", clear
 			local from_next = `strt' + 1  
 		
 			foreach next of numlist `from_next'(1)`max_readmit'{
+			* This may not be right.  Can be follow up, but cannot be initiator of new chain.  
+			* does this permit that?  Which "lost" is this checking?  
 				gen readmit_`day_threshold'f`strt't`next' = 1 if DATE_ADMISSION`next' - DATE_ADMISSION`strt' <= `day_threshold' & of_interest`strt' == 1 & lost != 1
 			}
 		} 
 	}
 
-	
+stop 
 * identify readmissions following the sentinel events  
 * DELETE 
 	local max_readmit = 10
@@ -144,8 +147,10 @@ use "`file_p'fake_SIDR_DOD_Dep.dta", clear
 	* SO FAR NOT SEING ANY LOSTS -> might make sense since we keep if readmit_`day_threshold' == 1 below.  
 	
 	foreach day_threshold of numlist 30 60 90{
-		local stop_at = `max_readmit'-1
-		
+
+	local stop_at = `max_readmit'-1
+
+
 		foreach vis of numlist 1(1)`stop_at'{
 		preserve
 				* Is this going to skip 'lost' events properly?  
