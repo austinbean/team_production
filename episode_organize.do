@@ -100,15 +100,17 @@ use "`file_p'fake_SIDR_DOD_Dep.dta", clear
 * Determine events which will be "lost" - not follow-ups on their own since they occur within 'barrier' days of a sentinel event.  Is this getting it exactly right?  
 	* these events shouldn't initiate new chains.  	But they are potentially *follow-ups* to earlier events.
 	* Reminder: check if visit 1 is more than barrier days from the start.
-	gen lost = 0
+	* TODO - this must track lost visits w/ an index for which one is lost or not.  
+
 	foreach curr_vis of numlist 2(1)`max_readmit'{
 	local prev_vis = `curr_vis'-1
-	
+		gen lost`curr_vis' = 0
 		foreach prior of numlist 1(1)`prev_vis'{	
 			* tags lost = 1 if there is any previous of interest visit < barrier days. 
-			replace lost = 1 if (DATE_ADMISSION`curr_vis' - DATE_ADMISSION`prior' < `barrier') & (of_interest`prior' == 1) & (of_interest`curr_vis' == 1)
+			replace lost`curr_vis' = 1 if (DATE_ADMISSION`curr_vis' - DATE_ADMISSION`prior' < `barrier') & (of_interest`prior' == 1) & (of_interest`curr_vis' == 1)
 		}
 	}
+
 	* to look at results, uncomment: 
 	* reshape long DATE_ADMISSION lost of_interest, i(PID_PDE_PATIENT) j(vctr)
 
@@ -132,20 +134,19 @@ use "`file_p'fake_SIDR_DOD_Dep.dta", clear
 			local from_next = `strt' + 1  
 		
 			foreach next of numlist `from_next'(1)`max_readmit'{
-			* This may not be right.  Can be follow up, but cannot be initiator of new chain.  
-			* does this permit that?  Which "lost" is this checking?  
-				gen readmit_`day_threshold'f`strt't`next' = 1 if DATE_ADMISSION`next' - DATE_ADMISSION`strt' <= `day_threshold' & of_interest`strt' == 1 & lost != 1
+
+				gen readmit_`day_threshold'f`strt't`next' = 1 if DATE_ADMISSION`next' - DATE_ADMISSION`strt' <= `day_threshold' & of_interest`strt' == 1 & lost`strt' != 1
 			}
 		} 
 	}
 
-stop 
+
 * identify readmissions following the sentinel events  
 * DELETE 
 	local max_readmit = 10
 
 	* SO FAR NOT SEING ANY LOSTS -> might make sense since we keep if readmit_`day_threshold' == 1 below.  
-	
+	* check this guy: PDEAAK6NN547 -> 3 Nov should be a follow up, but not initiate a new one.  
 	foreach day_threshold of numlist 30 60 90{
 
 	local stop_at = `max_readmit'-1
