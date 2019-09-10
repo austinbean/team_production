@@ -11,7 +11,7 @@
 
 
 	* TODO - remove extra local constants below.  Don't keep at 10.
-	* TODO - check whether first visit is w/in "barrier" days of min visit in date.	
+
 	
 local file_p = "/Users/tuk39938/Desktop/programs/team_production/"
 *local file_p = "C:\Users\atulgup\Dropbox (Penn)\Projects\Teams\team_production"
@@ -57,6 +57,8 @@ use "`file_p'fake_SIDR_DOD_Dep.dta", clear
 		 */
 	local max_readmit = 10
 	local barrier = 90 // There is only a single barrier value - 90 days.
+	summarize DATE_ADMISSION 
+	local date_min = `r(min)' // minimum date -> can't determine whether these are follow-ups 
 
 	
 
@@ -97,26 +99,38 @@ use "`file_p'fake_SIDR_DOD_Dep.dta", clear
 	bysort PID_PDE_PATIENT (DATE_ADMISSION): gen admit_counter = _n 
 	reshape wide DATE_ADMISSION of_interest, i(PID_PDE_PATIENT) j(admit_counter)
 	
-* Determine events which will be "lost" - not follow-ups on their own since they occur within 'barrier' days of a sentinel event.  Is this getting it exactly right?  
-	* these events shouldn't initiate new chains.  	But they are potentially *follow-ups* to earlier events.
-	* Reminder: check if visit 1 is more than barrier days from the start.
-	* TODO - this must track lost visits w/ an index for which one is lost or not.  
+	* Determine events which will be "lost" - not follow-ups on their own since they occur within 'barrier' days of a sentinel event.  Is this getting it exactly right?  
+		* these events shouldn't initiate new chains.  	But they are potentially *follow-ups* to earlier events.
+		* Also checks if visit 1 is more than barrier days from the start.
 
+	gen lost1 = 0
+	replace lost1 = 1 if (DATE_ADMISSION1 - `date_min' < `barrier') & of_interest1 == 1
 	foreach curr_vis of numlist 2(1)`max_readmit'{
-	local prev_vis = `curr_vis'-1
+		local prev_vis = `curr_vis'-1
 		gen lost`curr_vis' = 0
-		foreach prior of numlist 1(1)`prev_vis'{	
-			* tags lost = 1 if there is any previous of interest visit < barrier days. 
-			replace lost`curr_vis' = 1 if (DATE_ADMISSION`curr_vis' - DATE_ADMISSION`prior' < `barrier') & (of_interest`prior' == 1) & (of_interest`curr_vis' == 1)
-		}
+		
+			foreach prior of numlist 1(1)`prev_vis'{	
+				* tags lost = 1 if there is *any* previous of interest visit < barrier days. 
+				replace lost`curr_vis' = 1 if (DATE_ADMISSION`curr_vis' - DATE_ADMISSION`prior' < `barrier') & (of_interest`prior' == 1) & (of_interest`curr_vis' == 1)
+			}
 	}
 
-	* to look at results, uncomment: 
-	* reshape long DATE_ADMISSION lost of_interest, i(PID_PDE_PATIENT) j(vctr)
+	* keep a record of which visits should be lost for each individual
+		preserve 
+			reshape long DATE_ADMISSION of_interest lost, i(PID_PDE_PATIENT) j(visctr)
+			drop visctr of_interest 
+			keep if DATE_ADMISSION != .
+			rename lost visit_lost
+			label variable visit_lost "visit will not generate follow-ups"
+			save "`file_p'lost_visits.dta", replace
+		restore 
+
+
+				* to look at results, uncomment: 
+				* reshape long DATE_ADMISSION lost of_interest, i(PID_PDE_PATIENT) j(vctr)
 
 	/*
-	Next loop looks (and may be) very inefficient, but...
-	- Need to identify ALL readmissions within some set of thresholds, here 30 60 and 90 days
+Identify ALL readmissions within some set of thresholds, here 30 60 and 90 days
 	- Any individual may have many or none within the thresholds.
 	- Thus... 
 		- Measure distance between subsequent admissions
@@ -142,11 +156,7 @@ use "`file_p'fake_SIDR_DOD_Dep.dta", clear
 
 
 * identify readmissions following the sentinel events  
-* DELETE 
-	local max_readmit = 10
 
-	* SO FAR NOT SEING ANY LOSTS -> might make sense since we keep if readmit_`day_threshold' == 1 below.  
-	* check this guy: PDEAAK6NN547 -> 3 Nov should be a follow up, but not initiate a new one.  
 	foreach day_threshold of numlist 30 60 90{
 
 	local stop_at = `max_readmit'-1
@@ -155,11 +165,12 @@ use "`file_p'fake_SIDR_DOD_Dep.dta", clear
 		foreach vis of numlist 1(1)`stop_at'{
 		preserve
 				* Is this going to skip 'lost' events properly?  
-			keep PID_PDE_PATIENT DATE_ADMISSION* of_interest`vis' readmit_`day_threshold'f`vis't* lost
+			keep PID_PDE_PATIENT DATE_ADMISSION* of_interest`vis' readmit_`day_threshold'f`vis't* lost*
 			rename DATE_ADMISSION`vis' following_up_from_`vis'
 			label variable following_up_from_`vis' "date of visit to which present follows up"
 			rename of_interest`vis' of_interest 
-			reshape long DATE_ADMISSION readmit_`day_threshold'f`vis't , i(PID_PDE_PATIENT) j(followups)
+				* lost == 1 indicates date in "DATE_ADMISSION" will not generate follow-ups    
+			reshape long DATE_ADMISSION readmit_`day_threshold'f`vis't lost, i(PID_PDE_PATIENT) j(followups)
 			keep if readmit_`day_threshold'f`vis't == 1
 			drop followups of_interest readmit_`day_threshold'f`vis't 
 			gen byte is_`day_threshold'_follow_up_`vis' = 1
@@ -171,39 +182,32 @@ use "`file_p'fake_SIDR_DOD_Dep.dta", clear
 		}
 	}
 
-	stop 
+	
 * Combine the follow-up visit data. 
 	foreach day_threshold of numlist 30 60 90{
 		local stop_at = `max_readmit'-1
 		
 		use "`file_p'follow_ups_`day_threshold'd_1vis.dta", clear
-		foreach nm of numlist 2(1)`stop_at'{
-			append using "`file_p'follow_ups_`day_threshold'd_`nm'vis.dta"
+			foreach nm of numlist 2(1)`stop_at'{
+				append using "`file_p'follow_ups_`day_threshold'd_`nm'vis.dta"
 
-				* if disk space or clutter in folders is a concern, uncomment the remove command which follows.
-			rm "`file_p'follow_ups_`day_threshold'd_`nm'vis.dta"
-		}
+					* if disk space or clutter in folders is a concern, uncomment the remove command which follows.
+				rm "`file_p'follow_ups_`day_threshold'd_`nm'vis.dta"
+			}
 		rm "`file_p'follow_ups_`day_threshold'd_1vis.dta"
 		
 		save "`file_p'follow_ups_`day_threshold'd.dta", replace
 	}
 	
-stop 
 
+	
 * Clean up to prevent double assignment -> each double assigned visit will be assigned to the earliest sentinel event.  Note one difficulty w/ this under "comments" above
-	* Need to guarantee that the barrier condition is satisfied.
-	* only matters with multiple admits, will only hit those with more than one record
-	* need to reshape by record PID Date_admission, sort by Date_admission, generate the min date associate with a record
-	* then for subsequent dates, if the min in one sequence fails barrier condition wrt previous, it can be a follow up itself or not.  
-	/*
-	Need to sort them, then compare the earliest date in one to the latest date in another BUT need to track
-	for each one whether it is of interest or not.  WTF.  Ugh.  
-	*/
+	* "lost" events will not generate follow-ups. 
 
 	foreach day_threshold of numlist 30 60 90{
 		use "`file_p'follow_ups_`day_threshold'd.dta", clear
 		sort PID_PDE_PATIENT DATE_ADMISSION	
-		collapse (firstnm) following_up_from_* is_`day_threshold'_follow_up_* , by(PID_PDE_PATIENT DATE_ADMISSION)
+		collapse (firstnm) following_up_from_* is_`day_threshold'_follow_up_* lost, by(PID_PDE_PATIENT DATE_ADMISSION)
 		reshape long following_up_from_ is_`day_threshold'_follow_up_,  i(PID_PDE_PATIENT DATE_ADMISSION) j(ctt)
 		keep if is_`day_threshold'_follow_up_ != .
 		bysort PID_PDE_PATIENT DATE_ADMISSION: gen adct = _n
@@ -219,9 +223,10 @@ stop
 * Identify those visits which have follow ups:
 	foreach day_threshold of numlist 30 60 90{
 		use "`file_p'follow_ups_`day_threshold'd.dta", clear
+		drop lost
 		sort PID_PDE_PATIENT following_up_from_`day_threshold'
 		bysort PID_PDE_PATIENT following_up_from_`day_threshold' (DATE_ADMISSION): gen follow_ups = _n 
-		reshape wide DATE_ADMISSION, i(PID_PDE_PATIENT following_up_from_`day_threshold') j(follow_ups)
+		reshape wide DATE_ADMISSION , i(PID_PDE_PATIENT following_up_from_`day_threshold') j(follow_ups)
 		rename is_`day_threshold'_follow_up has_`day_threshold'_follow_ups
 		label variable has_`day_threshold'_follow_ups "admission has `day_threshold' day follow ups"
 		rename DATE_ADMISSION* follow_up*_`day_threshold'
@@ -235,15 +240,21 @@ stop
 * Merge back to original:
 
 	use "`file_p'fake_SIDR_DOD_Dep.dta", clear
+	
+	* Adds 30 60 90 day follow-ups for each visit 
 	foreach day_threshold of numlist 30 60 90{
 		merge m:1 PID_PDE_PATIENT DATE_ADMISSION using "`file_p'follow_ups_`day_threshold'd.dta", nogen
 		replace is_`day_threshold'_follow_up = 0 if is_`day_threshold'_follow_up == .
 	}
 	
+	* Adds indicator whether visit has follow ups or not 
 	foreach day_threshold of numlist 30 60 90{
 		merge m:1 PID_PDE_PATIENT DATE_ADMISSION using "`file_p'num_follups_`day_threshold'd.dta", nogen
 		replace has_`day_threshold'_follow_ups = 0 if has_`day_threshold'_follow_ups == .
 	}
+	
+	* Adds indicator for lost visits.
+	merge m:1 PID_PDE_PATIENT DATE_ADMISSION using "`file_p'lost_visits.dta", nogen
 
 	save "`file_p'fake_SIDR_DOD_Dep_readmits.dta", replace
 	
