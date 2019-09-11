@@ -13,7 +13,7 @@
 	* TODO - remove extra local constants below.  Don't keep at 10.
 
 	
-local file_p = "/Users/tuk39938/Desktop/programs/team_production/"
+local file_p = "/Users/austinbean/Desktop/programs/team_production/"
 *local file_p = "C:\Users\atulgup\Dropbox (Penn)\Projects\Teams\team_production"
 *local file_p = "C:\Users\STEPHEN\Dropbox (Personal)\Army-Baylor\Research\Teams\team_production"
 
@@ -67,7 +67,7 @@ use "`file_p'fake_SIDR_DOD_Dep.dta", clear
 	sort PID_PDE_PATIENT DATE_ADMISSION
 
 	* keep only diagnosis related variables
-	keep PID_PDE_PATIENT DATE_ADMISSION *DX*
+	keep PID_PDE_PATIENT DATE_ADMISSION DATE_DISPOSITION *DX*
 	drop DX*POA
 	rename ADMDX DX21
 	
@@ -97,8 +97,8 @@ use "`file_p'fake_SIDR_DOD_Dep.dta", clear
 	drop DX
 	sort PID_PDE_PATIENT DATE_ADMISSION
 	bysort PID_PDE_PATIENT (DATE_ADMISSION): gen admit_counter = _n 
-	reshape wide DATE_ADMISSION of_interest, i(PID_PDE_PATIENT) j(admit_counter)
-	
+	reshape wide DATE_ADMISSION DATE_DISPOSITION of_interest, i(PID_PDE_PATIENT) j(admit_counter)
+
 	* Determine events which will be "lost" - not follow-ups on their own since they occur within 'barrier' days of a sentinel event.  Is this getting it exactly right?  
 		* these events shouldn't initiate new chains.  	But they are potentially *follow-ups* to earlier events.
 		* Also checks if visit 1 is more than barrier days from the start.
@@ -111,13 +111,13 @@ use "`file_p'fake_SIDR_DOD_Dep.dta", clear
 		
 			foreach prior of numlist 1(1)`prev_vis'{	
 				* tags lost = 1 if there is *any* previous of interest visit < barrier days. 
-				replace lost`curr_vis' = 1 if (DATE_ADMISSION`curr_vis' - DATE_ADMISSION`prior' < `barrier') & (of_interest`prior' == 1) & (of_interest`curr_vis' == 1)
+				replace lost`curr_vis' = 1 if (DATE_ADMISSION`curr_vis' - DATE_DISPOSITION`prior' < `barrier') & (of_interest`prior' == 1) & (of_interest`curr_vis' == 1)
 			}
 	}
 
 	* keep a record of which visits should be lost for each individual
 		preserve 
-			reshape long DATE_ADMISSION of_interest lost, i(PID_PDE_PATIENT) j(visctr)
+			reshape long DATE_ADMISSION DATE_DISPOSITION of_interest lost, i(PID_PDE_PATIENT) j(visctr)
 			drop visctr of_interest 
 			keep if DATE_ADMISSION != .
 			rename lost visit_lost
@@ -149,7 +149,7 @@ Identify ALL readmissions within some set of thresholds, here 30 60 and 90 days
 		
 			foreach next of numlist `from_next'(1)`max_readmit'{
 
-				gen readmit_`day_threshold'f`strt't`next' = 1 if DATE_ADMISSION`next' - DATE_ADMISSION`strt' <= `day_threshold' & of_interest`strt' == 1 & lost`strt' != 1
+				gen readmit_`day_threshold'f`strt't`next' = 1 if DATE_ADMISSION`next' - DATE_DISPOSITION`strt' <= `day_threshold' & of_interest`strt' == 1 & lost`strt' != 1
 			}
 		} 
 	}
@@ -165,12 +165,12 @@ Identify ALL readmissions within some set of thresholds, here 30 60 and 90 days
 		foreach vis of numlist 1(1)`stop_at'{
 		preserve
 				* Is this going to skip 'lost' events properly?  
-			keep PID_PDE_PATIENT DATE_ADMISSION* of_interest`vis' readmit_`day_threshold'f`vis't* lost*
-			rename DATE_ADMISSION`vis' following_up_from_`vis'
+			keep PID_PDE_PATIENT DATE_ADMISSION* DATE_DISPOSITION* of_interest`vis' readmit_`day_threshold'f`vis't* lost*
+			rename DATE_DISPOSITION`vis' following_up_from_`vis'
 			label variable following_up_from_`vis' "date of visit to which present follows up"
 			rename of_interest`vis' of_interest 
 				* lost == 1 indicates date in "DATE_ADMISSION" will not generate follow-ups    
-			reshape long DATE_ADMISSION readmit_`day_threshold'f`vis't lost, i(PID_PDE_PATIENT) j(followups)
+			reshape long DATE_ADMISSION DATE_DISPOSITION readmit_`day_threshold'f`vis't lost, i(PID_PDE_PATIENT) j(followups)
 			keep if readmit_`day_threshold'f`vis't == 1
 			drop followups of_interest readmit_`day_threshold'f`vis't 
 			gen byte is_`day_threshold'_follow_up_`vis' = 1
@@ -199,7 +199,7 @@ Identify ALL readmissions within some set of thresholds, here 30 60 and 90 days
 		save "`file_p'follow_ups_`day_threshold'd.dta", replace
 	}
 	
-
+stop 
 	
 * Clean up to prevent double assignment -> each double assigned visit will be assigned to the earliest sentinel event.  Note one difficulty w/ this under "comments" above
 	* "lost" events will not generate follow-ups. 
