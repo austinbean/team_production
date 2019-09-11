@@ -199,7 +199,7 @@ Identify ALL readmissions within some set of thresholds, here 30 60 and 90 days
 		save "`file_p'follow_ups_`day_threshold'd.dta", replace
 	}
 	
-stop 
+
 	
 * Clean up to prevent double assignment -> each double assigned visit will be assigned to the earliest sentinel event.  Note one difficulty w/ this under "comments" above
 	* "lost" events will not generate follow-ups. 
@@ -207,7 +207,7 @@ stop
 	foreach day_threshold of numlist 30 60 90{
 		use "`file_p'follow_ups_`day_threshold'd.dta", clear
 		sort PID_PDE_PATIENT DATE_ADMISSION	
-		collapse (firstnm) following_up_from_* is_`day_threshold'_follow_up_* lost, by(PID_PDE_PATIENT DATE_ADMISSION)
+		collapse (firstnm) following_up_from_* is_`day_threshold'_follow_up_* lost DATE_DISPOSITION, by(PID_PDE_PATIENT DATE_ADMISSION)
 		reshape long following_up_from_ is_`day_threshold'_follow_up_,  i(PID_PDE_PATIENT DATE_ADMISSION) j(ctt)
 		keep if is_`day_threshold'_follow_up_ != .
 		bysort PID_PDE_PATIENT DATE_ADMISSION: gen adct = _n
@@ -226,7 +226,7 @@ stop
 		drop lost
 		sort PID_PDE_PATIENT following_up_from_`day_threshold'
 		bysort PID_PDE_PATIENT following_up_from_`day_threshold' (DATE_ADMISSION): gen follow_ups = _n 
-		reshape wide DATE_ADMISSION , i(PID_PDE_PATIENT following_up_from_`day_threshold') j(follow_ups)
+		reshape wide DATE_ADMISSION DATE_DISPOSITION, i(PID_PDE_PATIENT following_up_from_`day_threshold') j(follow_ups)
 		rename is_`day_threshold'_follow_up has_`day_threshold'_follow_ups
 		label variable has_`day_threshold'_follow_ups "admission has `day_threshold' day follow ups"
 		rename DATE_ADMISSION* follow_up*_`day_threshold'
