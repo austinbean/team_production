@@ -13,7 +13,7 @@
 	* TODO - remove extra local constants below.  Don't keep at 10.
 
 	
-local file_p = "/Users/austinbean/Desktop/programs/team_production/"
+local file_p = "/Users/tuk39938/Desktop/programs/team_production/"
 *local file_p = "C:\Users\atulgup\Dropbox (Penn)\Projects\Teams\team_production"
 *local file_p = "C:\Users\STEPHEN\Dropbox (Personal)\Army-Baylor\Research\Teams\team_production"
 
@@ -58,7 +58,7 @@ use "`file_p'fake_SIDR_DOD_Dep.dta", clear
 	local max_readmit = 10
 	local barrier = 90 // There is only a single barrier value - 90 days.
 	summarize DATE_ADMISSION 
-	local date_min = `r(min)' // minimum date -> can't determine whether these are follow-ups 
+	local date_min = `r(min)' // minimum date -> can't determine whether these are follow-ups or not.
 
 	
 
@@ -104,7 +104,7 @@ use "`file_p'fake_SIDR_DOD_Dep.dta", clear
 		* Also checks if visit 1 is more than barrier days from the start.
 
 	gen lost1 = 0
-	replace lost1 = 1 if (DATE_ADMISSION1 - `date_min' < `barrier') & of_interest1 == 1
+	replace lost1 = 1 if (DATE_DISPOSITION1 - `date_min' < `barrier') & of_interest1 == 1
 	foreach curr_vis of numlist 2(1)`max_readmit'{
 		local prev_vis = `curr_vis'-1
 		gen lost`curr_vis' = 0
@@ -158,7 +158,6 @@ Identify ALL readmissions within some set of thresholds, here 30 60 and 90 days
 * identify readmissions following the sentinel events  
 
 	foreach day_threshold of numlist 30 60 90{
-
 	local stop_at = `max_readmit'-1
 
 
@@ -166,8 +165,8 @@ Identify ALL readmissions within some set of thresholds, here 30 60 and 90 days
 		preserve
 				* Is this going to skip 'lost' events properly?  
 			keep PID_PDE_PATIENT DATE_ADMISSION* DATE_DISPOSITION* of_interest`vis' readmit_`day_threshold'f`vis't* lost*
-			rename DATE_DISPOSITION`vis' following_up_from_`vis'
-			label variable following_up_from_`vis' "date of visit to which present follows up"
+			rename DATE_ADMISSION`vis' following_up_from_`vis'
+			label variable following_up_from_`vis' "admit date of vis to which pres. follows up"
 			rename of_interest`vis' of_interest 
 				* lost == 1 indicates date in "DATE_ADMISSION" will not generate follow-ups    
 			reshape long DATE_ADMISSION DATE_DISPOSITION readmit_`day_threshold'f`vis't lost, i(PID_PDE_PATIENT) j(followups)
@@ -207,12 +206,13 @@ Identify ALL readmissions within some set of thresholds, here 30 60 and 90 days
 	foreach day_threshold of numlist 30 60 90{
 		use "`file_p'follow_ups_`day_threshold'd.dta", clear
 		sort PID_PDE_PATIENT DATE_ADMISSION	
-		collapse (firstnm) following_up_from_* is_`day_threshold'_follow_up_* lost DATE_DISPOSITION, by(PID_PDE_PATIENT DATE_ADMISSION)
+		collapse (firstnm) following_up_from_* is_`day_threshold'_follow_up_* lost, by(PID_PDE_PATIENT DATE_ADMISSION DATE_DISPOSITION)
 		reshape long following_up_from_ is_`day_threshold'_follow_up_,  i(PID_PDE_PATIENT DATE_ADMISSION) j(ctt)
 		keep if is_`day_threshold'_follow_up_ != .
 		bysort PID_PDE_PATIENT DATE_ADMISSION: gen adct = _n
 		drop if adct > 1
-		drop adct ctt 
+		drop adct 
+		drop ctt
 		rename following_up_from_ following_up_from_`day_threshold'
 		rename is_`day_threshold'_follow_up_ is_`day_threshold'_follow_up
 		label variable following_up_from_`day_threshold' "orig. date to which this is `day_threshold' follow-up"
@@ -220,8 +220,13 @@ Identify ALL readmissions within some set of thresholds, here 30 60 and 90 days
 		save "`file_p'follow_ups_`day_threshold'd.dta", replace
 	}
 	
-* Identify those visits which have follow ups:
+	
+
+* Identify those visits which have follow ups:	
+
 	foreach day_threshold of numlist 30 60 90{
+
+	
 		use "`file_p'follow_ups_`day_threshold'd.dta", clear
 		drop lost
 		sort PID_PDE_PATIENT following_up_from_`day_threshold'
@@ -229,9 +234,10 @@ Identify ALL readmissions within some set of thresholds, here 30 60 and 90 days
 		reshape wide DATE_ADMISSION DATE_DISPOSITION, i(PID_PDE_PATIENT following_up_from_`day_threshold') j(follow_ups)
 		rename is_`day_threshold'_follow_up has_`day_threshold'_follow_ups
 		label variable has_`day_threshold'_follow_ups "admission has `day_threshold' day follow ups"
-		rename DATE_ADMISSION* follow_up*_`day_threshold'
+		rename DATE_ADMISSION* follow_up_ad*_`day_threshold'
+		rename DATE_DISPOSITION* follow_up_dis*_`day_threshold'
 		rename following_up_from_`day_threshold' DATE_ADMISSION 
-		egen num_`day_threshold'_follow_ups = rownonmiss(follow_up*)
+		egen num_`day_threshold'_follow_ups = rownonmiss(follow_up_ad*)
 		label variable num_`day_threshold'_follow_ups "has N follow ups w/in `day_threshold' d"
 		save "`file_p'num_follups_`day_threshold'd.dta", replace
 	}
@@ -248,6 +254,7 @@ Identify ALL readmissions within some set of thresholds, here 30 60 and 90 days
 	}
 	
 	* Adds indicator whether visit has follow ups or not 
+		* There are unmatched from *using* - that is not possible.  
 	foreach day_threshold of numlist 30 60 90{
 		merge m:1 PID_PDE_PATIENT DATE_ADMISSION using "`file_p'num_follups_`day_threshold'd.dta", nogen
 		replace has_`day_threshold'_follow_ups = 0 if has_`day_threshold'_follow_ups == .
