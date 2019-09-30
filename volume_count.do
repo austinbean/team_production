@@ -30,7 +30,36 @@ merge 1:1 MERGE_VAR using "`file_p'fake_SIDR_DOD_Dep.dta"
 	drop if provnpi == ""
 
 	sort provnpi adm_year adm_month
+	
+	* counter
+	gen thect = 1
 
 	* count DRG's, CPT's, DIAG_CODES
-	
+preserve	
+	bysort provnpi adm_year adm_month MSDRG : egen drg_ct = sum(thect)
+	label variable drg_ct "monthly drg count"
+	duplicates drop provnpi adm_year adm_month MSDRG, force 
+	keep provnpi adm_year adm_month MSDRG drg_ct 
+	save "`file_p'drg_count_by_npi.dta", replace
+restore 
+
+
+* others require reshape and different sort
+	* are DX and dx the same across the files?  
+	* DIAGNOSES
+preserve 
+	keep provnpi adm_year adm_month ADMDX dx* DX*
 	bysort provnpi adm_year adm_month :
+	
+	* PROCEDURES - cpt_, PROC
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+*
