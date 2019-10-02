@@ -1,14 +1,22 @@
-* volume_count.do
-	
+/* volume_count.do
+
+LAST UPDATE:
+WHAT: ADAPT TO BEING CALLED BY THE MASTER FILE
+WHEN: OCT 2, 2019
+BY: AG
+*/
+
+/*	
 local file_p = "/Users/tuk39938/Desktop/programs/team_production/"
 *local file_p = "C:\Users\atulgup\Dropbox (Penn)\Projects\Teams\team_production"
 *local file_p = "C:\Users\STEPHEN\Dropbox (Personal)\Army-Baylor\Research\Teams\team_production"
+*/
 
-	* 
-use "`file_p'fake_dep_4.dta", clear
+	
+use "$file_p\fake_dep_4.dta", clear
  
  
-merge 1:1 MERGE_VAR using "`file_p'fake_SIDR_DOD_Dep.dta"
+merge 1:1 MERGE_VAR using "$file_p\fake_SIDR_DOD_Dep.dta"
 
 * "unique episode" -> kind of
 	gen episode_id = _n
@@ -43,7 +51,7 @@ preserve
 	rename *, upper 
 	bysort PROVNPI ADM_MONTH ADM_YEAR (DRG_CT): gen nn = _n 
 	reshape wide MSDRG DRG_CT, i(PROVNPI ADM_MONTH ADM_YEAR) j(nn)
-	save "`file_p'drg_count_by_npi.dta", replace
+	save "$file_p\drg_count_by_npi.dta", replace
 restore 
 
 
@@ -68,7 +76,7 @@ preserve
 	rename *, upper
 	bysort PROVNPI ADM_MONTH ADM_YEAR (DX_COUNT): gen nn = _n 
 	reshape wide DX DX_COUNT, i(PROVNPI ADM_MONTH ADM_YEAR) j(nn)
-	save "`file_p'diag_code_count_by_npi.dta", replace
+	save "$file_p\diag_code_count_by_npi.dta", replace
 restore 
 
 	* PROCEDURES - cpt_, PROC
@@ -88,7 +96,7 @@ preserve
 	rename *, upper
 	bysort PROVNPI ADM_MONTH ADM_YEAR (CPT_COUNT): gen nn = _n 
 	reshape wide CPT CPT_COUNT, i(PROVNPI ADM_MONTH ADM_YEAR) j(nn)
-	save "`file_p'cpt_code_count_by_npi.dta", replace
+	save "$file_p\cpt_code_count_by_npi.dta", replace
 restore 
 	
 * Finally, there is the set of PROC values
@@ -114,21 +122,23 @@ preserve
 	rename *, upper 
 	bysort PROVNPI ADM_MONTH ADM_YEAR (PROC_UNITS_COUNT): gen nn = _n 
 	reshape wide PROC PROC_UNITS_COUNT PROC_TOTAL_COUNT, i(PROVNPI ADM_MONTH ADM_YEAR) j(nn)
-	save "`file_p'proc_count_by_npi.dta", replace 
+	save "$file_p\proc_count_by_npi.dta", replace 
 restore 
 		
 * Clean up, merge all volumes into single file 
 
 clear 
-use "`file_p'drg_count_by_npi.dta"
+use "$file_p\drg_count_by_npi.dta"
 
-merge m:1 PROVNPI ADM_YEAR ADM_MONTH using "`file_p'diag_code_count_by_npi.dta"
+merge m:1 PROVNPI ADM_YEAR ADM_MONTH using "$file_p\diag_code_count_by_npi.dta"
 drop _merge
 
-merge 1:1 PROVNPI ADM_YEAR ADM_MONTH using "`file_p'cpt_code_count_by_npi.dta"
+merge 1:1 PROVNPI ADM_YEAR ADM_MONTH using "$file_p\cpt_code_count_by_npi.dta"
 drop _merge 
 
-merge 1:1 PROVNPI ADM_YEAR ADM_MONTH using "`file_p'proc_count_by_npi.dta"
+merge 1:1 PROVNPI ADM_YEAR ADM_MONTH using "$file_p\proc_count_by_npi.dta"
 drop _merge 
 
-save "`file_p'ALL_counts_by_npi.dta", replace 
+save "$file_p\ALL_counts_by_npi.dta", replace 
+
+*END CODE;
