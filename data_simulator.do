@@ -1,17 +1,24 @@
+/*
+Generate some simulated data.
+
+LAST UPDATE: 
+WHAT: ADAPT TO CALLING FROM MASTER FILE.
+WHEN: OCT 2, 2019
+BY: AG
+*/
+
 clear
-
-* Generate some simulated data.
-
 set seed 41
 
 *  observation numbers
 set obs 100000
 
 
-* COMMENT OUT THE TWO WHICH ARE NOT YOURS TO RUN!
+/* COMMENT OUT THE TWO WHICH ARE NOT YOURS TO RUN!
 local file_p = "/Users/tuk39938/Desktop/programs/team_production/"
 *local file_p = "C:\Users\atulgup\Dropbox (Penn)\Projects\Teams\team_production"
 *local file_p = "C:\Users\STEPHEN\Dropbox (Personal)\Army-Baylor\Research\Teams\team_production"
+*/
 
 * RENAME TO WHATEVER THE MERGE VARIABLE IS...
 
@@ -860,13 +867,13 @@ keep x_*
 
 rename x_* *
 
-save "`file_p'fake_dep_4.dta", replace 
+save "$file_p\fake_dep_4.dta", replace 
 
 restore
 
 drop x_* 
 
-save "`file_p'fake_SIDR_DOD_Dep.dta", replace
+save "$file_p\fake_SIDR_DOD_Dep.dta", replace
 
 clear 
 
