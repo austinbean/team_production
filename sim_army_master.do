@@ -2,31 +2,36 @@
 * Generates simulated file for the army personnel master file.
 
 FIRST CREATED: SEPT 4, 2019
-LAST UPDATED : SEPT 6, 2019
+LAST UPDATED : OCT 2, 2019
 
 LAST UPDATE: MIMIC TRANSFER PATTERNS IN REAL DATA (CENTERED AROUND 3 YEAR TENURE AT A UNIT/ZIP). MAKE CENSORING
 			VS ATTRITION EXPLICIT. MAKE SNAPSHOT FREQUENCY QUARTERLY. START IN 2001 AND END IN 2016. MAKE PEOPLE
-			JOIN BETWEEN AGES 18 AND 25.
+			JOIN BETWEEN AGES 18 AND 25. ADAPT TO PROGRAM THAT CAN BE CALLED BY MASTER.
 		BY : AG
 */
+
+cap program drop prog_sim_army_master
+program define prog_sim_army_master
+
+args samp_start_yr samp_end_yr join_frst join_last
 
 set more off
 clear all
 set seed 41
 
-* COMMENT OUT THE TWO WHICH ARE NOT YOURS TO RUN!
+/* COMMENT OUT THE TWO WHICH ARE NOT YOURS TO RUN!
 *local file_p = "/Users/tuk39938/Desktop/programs/team_production/"
 local file_p = "C:\Users\atulgup\Dropbox (Penn)\Projects\Teams\team_production\"
-*local file_p = "C:\Users\STEPHEN\Dropbox (Personal)\Army-Baylor\Research\Teams\team_production"
+*local file_p = "C:\Users\STEPHEN\Dropbox (Personal)\Army-Baylor\Research\Teams\team_production"*/
 
-local samp_start_yr 2001
-local samp_end_yr 2016
+*local samp_start_yr 2001
+*local samp_end_yr 2016
 local bday_old 1960
 local bday_yng 1995
 local army_join_old 1990
 local snap_last td(31dec2016)
-local join_frst 18
-local join_last 25
+*local join_frst 18
+*local join_last 25
 
 *************;
 *Create list of unit IDs;
@@ -301,6 +306,8 @@ replace PN_AGE_QY=. if DATE_BIRTH_PDE==.
 
 drop unif
 
-save "`file_p'fake_army_master.dta", replace 
+save "$file_p\fake_army_master.dta", replace 
 
-*clear 
+end
+
+*END PROGRAM;
