@@ -3,27 +3,32 @@ USES ARMY PERSONNEL FILE TO PRODUCE SOME STATS ON TRANSFERS AND RUN REGS TO CONF
 TRANSFERS ARE QUASI RANDOM.
 
 FIRST CREATED: SEPT 4, 2019
-LAST UPDATED : SEPT 6, 2019
+LAST UPDATED : OCT 2, 2019
 
-LAST UPDATE: XX
+LAST UPDATE: ADAPT TO BEING CALLED BY MASTER FILE.
 		BY : AG
 */
+
+cap program drop prog_check_transfers
+program define prog_check_transfers
+
+args targ
 
 set more off
 clear all
 
-* COMMENT OUT THE TWO WHICH ARE NOT YOURS TO RUN!
+/* COMMENT OUT THE TWO WHICH ARE NOT YOURS TO RUN!
 *local file_p = "/Users/tuk39938/Desktop/programs/team_production/"
 local file_p = "C:\Users\atulgup\Dropbox (Penn)\Projects\Teams\team_production\"
-*local file_p = "C:\Users\STEPHEN\Dropbox (Personal)\Army-Baylor\Research\Teams\team_production"
+*local file_p = "C:\Users\STEPHEN\Dropbox (Personal)\Army-Baylor\Research\Teams\team_production"*/
 
-use "`file_p'fake_army_master", clear
+use "$file_p\fake_army_master", clear
 
 *Set last date in army master;
 local last_snp = td(1oct2016)
 
 *Set "target" tenure: Duration that we expect to be modal;
-local targ 3
+*local targ 3
 
 *use shorter var names;
 ren ZIP_CODE_PDE_ASG_UNT_LOC zip_asg
@@ -245,6 +250,8 @@ di "Resid SS with dummies " rss1
 di "Resid SS without dummies " rss2
 di "F statistic with " dfa " and " dfr " d.f. = " fstat
 
+end
+*END PROGRAM;
 
 *clear 
 
