@@ -6,17 +6,17 @@ WHEN: OCT 2, 2019
 BY: AG
 */
 
-/*	
+	
 local file_p = "/Users/tuk39938/Desktop/programs/team_production/"
 *local file_p = "C:\Users\atulgup\Dropbox (Penn)\Projects\Teams\team_production"
 *local file_p = "C:\Users\STEPHEN\Dropbox (Personal)\Army-Baylor\Research\Teams\team_production"
-*/
+
 
 	
-use "$file_p\fake_dep_4.dta", clear
+use "`file_p'/fake_dep_4.dta", clear
  
  
-merge 1:1 MERGE_VAR using "$file_p\fake_SIDR_DOD_Dep.dta"
+merge 1:1 MERGE_VAR using "`file_p'/fake_SIDR_DOD_Dep.dta"
 
 * "unique episode" -> kind of
 	gen episode_id = _n
@@ -57,7 +57,7 @@ preserve
 	rename *, upper 
 
 	bysort PROVNPI ADM_YEAR ADM_MONTH (DRG_CT): gen nn = _n 
-	* use mnth_ix here.
+	* use mnth_ix here. -> ERROR HERE.  
 	foreach k of numlist 1(1)12{
 		bysort PROVNPI MSDRG (MNTH_IX): gen DRG_CT_`k'MNTH_PRIOR = DRG_CT[_n-`k']
 		replace DRG_CT_`k'MNTH_PRIOR = 0 if DRG_CT_`k'MNTH_PRIOR == .
@@ -89,6 +89,7 @@ preserve
 	rename *, upper
 
 	*BE CAREFUL - not all diagnoses appear every month
+		* This won't get it -> for each k, it needs to check everything PRIOR w/in PROVNPI DX but watch years and months.
 	foreach k of numlist 1(1)12{
 		bysort PROVNPI DX (MNTH_IX): gen DX_CT_`k'MNTH_PRIOR = DX_COUNT[_n-`k'] if MNTH_IX - MNTH_IX[_n-`k'] == `k'
 		replace DX_CT_`k'MNTH_PRIOR = 0 if DX_CT_`k'MNTH_PRIOR == .
