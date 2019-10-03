@@ -45,6 +45,11 @@ Details:
 - When you want to make an edit, you do: git checkout -b name_of_new_branch -> the "-b" creates a new "branch" which you give some name.
 - Make your edits.  They work.  Great.  Save the file.
 
+If you create a new file and want to commit then 'add' it first using git add filename.ext 
+2. git commit filename.ext -m “adding a new file”
+3. git push origin master 
+
+
 	# Committing
 - Then you need to tell git about them.  This is called "committing"
 - Each "commit" comes with a "message".  The message says what you did.  (The system also records who did it.)
