@@ -3,8 +3,8 @@ Generate simulated caper business file;
 
 FIRST CREATED: OCT 2, 2019
 LAST UPDATE: 
-WHAT: XX
-WHEN: XX
+WHAT: REFINEMENTS. ADAPT TO BEING CALLED TOGETHER WITH DATA_SIMULATE.
+WHEN: OCT 3, 2019
 BY: AG
 */
 
@@ -48,11 +48,13 @@ save `msma', replace
 
 clear
 
-set obs 12500
+set obs 15000
 
 gen str12 PID_PDE_SPONSOR = ""  
 replace PID_PDE_SPONSOR = "PDE"+char(runiformint(65,90)) + char(runiformint(65,90)) + char(runiformint(65,90)) + char(runiformint(48,57)) + char(runiformint(65,90)) + char(runiformint(65,90)) + char(runiformint(48,57)) + char(runiformint(48,57)) + char(runiformint(48,57))
 label variable PID_PDE_SPONSOR "" 
+
+bysort PID_PDE_SPONSOR: keep if _n==1
 
 expand 2
 
@@ -61,6 +63,8 @@ expand 2
 gen str12 PID_PDE_PATIENT = ""  
 replace PID_PDE_PATIENT = "PDE"+char(runiformint(65,90)) + char(runiformint(65,90)) + char(runiformint(65,90)) + char(runiformint(48,57)) + char(runiformint(65,90)) + char(runiformint(65,90)) + char(runiformint(48,57)) + char(runiformint(48,57)) + char(runiformint(48,57))
 label variable PID_PDE_PATIENT "" 
+
+bysort PID_PDE_PATIENT: keep if _n==1
 
 gen reps = runiformint(1,5)
 
@@ -147,29 +151,31 @@ forval i=2/13{
 }
 
 *Create ntrvu* variables;
+
+*First one has no missing;
 gen ntrvu=.
 replace ntrvu = 0 if rand<=0.49
 replace ntrvu = 1 if inrange(rand,0.491,0.65)
 replace ntrvu = 2 if inrange(rand,0.651,0.749)
 replace ntrvu = 3 if inrange(rand,0.7491,0.85)
-replace ntrvu = 4 if inrange(rand,0.851,0.95)
-replace ntrvu = runiformint(5,321) if rand>=0.951
+replace ntrvu = 4 if inrange(rand,0.851,0.98)
+replace ntrvu = runiformint(5,321) if ntrvu==.
 
 gen ntrvu1=.
-replace ntrvu1=0 if rand<=0.56
-replace ntrvu1=1 if inrange(rand,0.561,0.74)
-replace ntrvu1=2 if inrange(rand,0.741,0.89)
-replace ntrvu1=3 if inrange(rand,0.891,0.94)
-replace ntrvu1 =runiformint(4,26) if inrange(rand,0.941,0.945)
+replace ntrvu1=0 if rand<=0.56 & npervu1!=.
+replace ntrvu1=1 if inrange(rand,0.561,0.74) & npervu1!=.
+replace ntrvu1=2 if inrange(rand,0.741,0.89) & npervu1!=.
+replace ntrvu1=3 if inrange(rand,0.891,0.941) & npervu1!=.
+replace ntrvu1 =runiformint(4,26) if ntrvu1==. & npervu1!=.
 
 forval i=2/13{
 	gen ntrvu`i'=.
 	replace ntrvu`i'=runiformint(0,1) if inrange(rand,randmiss`i',0.995)
 	if inrange(`i',1,3){
-		replace ntrvu`i'=runiformint(2,26) if rand>=0.9951
+		replace ntrvu`i'=runiformint(2,26) if rand > 0.995
 	}
 	else{
-		replace ntrvu`i'=runiformint(2,150) if rand>=0.9951
+		replace ntrvu`i'=runiformint(2,150) if rand > 0.995
 	}
 }
 
@@ -179,25 +185,25 @@ replace nwrvu = 0 if rand<=0.49
 replace nwrvu = 1 if inrange(rand,0.491,0.74)
 replace nwrvu = 2 if inrange(rand,0.741,0.95)
 replace nwrvu = 3 if inrange(rand,0.951,0.99)
-replace nwrvu = runiformint(4,82) if rand>=0.991
+replace nwrvu = runiformint(4,82) if nwrvu==.
 
 gen nwrvu1=.
-replace nwrvu1 = 0 if rand<=0.74
-replace nwrvu1 = 1 if inrange(rand,0.741,0.89)
-replace nwrvu1 = 2 if inrange(rand,0.891,0.94)
-replace nwrvu1 = runiformint(3,18) if inrange(rand,0.941,0.945)
+replace nwrvu1 = 0 if rand<=0.74 & npervu1!=.
+replace nwrvu1 = 1 if inrange(rand,0.741,0.89) & npervu1!=.
+replace nwrvu1 = 2 if inrange(rand,0.891,0.94) & npervu1!=.
+replace nwrvu1 = runiformint(3,18) if nwrvu1==. & npervu1!=.
 
 forval i=2/13{
 	gen nwrvu`i'=.
 	replace nwrvu`i' = 0 if inrange(rand,randmiss`i',0.998)
 	if inrange(`i',1,3){
-		replace nwrvu`i'=runiformint(1,18) if rand>=0.9981
+		replace nwrvu`i'=runiformint(1,18) if rand>0.998
 	}
 	if inrange(`i',4,5){
-		replace nwrvu`i'=runiformint(1,70) if rand>=0.9981
+		replace nwrvu`i'=runiformint(1,70) if rand>0.998
 	}
 	if inrange(`i',6,13){
-		replace nwrvu`i'=runiformint(1,15) if rand>=0.9981
+		replace nwrvu`i'=runiformint(1,15) if rand>0.998
 	}
 
 }
@@ -207,13 +213,13 @@ gen p1pervu=.
 replace p1pervu = 0 if rand<=0.49
 replace p1pervu = 1 if inrange(rand,0.491,0.85)
 replace p1pervu = 2 if inrange(rand,0.851,0.99)
-replace p1pervu = runiformint(3,316) if rand>=0.991
+replace p1pervu = runiformint(3,316) if p1pervu==.
 
 gen p1pervu1=.
-replace p1pervu1=0 if rand<=0.56
-replace p1pervu1=1 if inrange(rand,0.561,0.91)
-replace p1pervu1=2 if inrange(rand,0.911,0.94)
-replace p1pervu1 =runiformint(3,8) if inrange(rand,0.941,0.945)
+replace p1pervu1=0 if rand<=0.56 & npervu1!=.
+replace p1pervu1=1 if inrange(rand,0.561,0.91) & npervu1!=.
+replace p1pervu1=2 if inrange(rand,0.911,0.94) & npervu1!=.
+replace p1pervu1 =runiformint(3,8) if p1pervu1==. & npervu1!=.
 
 forval i=2/13{
 	gen p1pervu`i'=.
@@ -232,15 +238,15 @@ replace p1trvu = 0 if rand<=0.49
 replace p1trvu = 1 if inrange(rand,0.491,0.65)
 replace p1trvu = 2 if inrange(rand,0.651,0.749)
 replace p1trvu = 3 if inrange(rand,0.7491,0.85)
-replace p1trvu = 4 if inrange(rand,0.851,0.98)
-replace p1trvu = runiformint(5,321) if rand>=0.981
+replace p1trvu = 4 if inrange(rand,0.851,0.99)
+replace p1trvu = runiformint(5,321) if p1trvu==.
 
 gen p1trvu1=.
-replace p1trvu1=0 if rand<=0.56
-replace p1trvu1=1 if inrange(rand,0.561,0.65)
-replace p1trvu1=2 if inrange(rand,0.651,0.85)
-replace p1trvu1=3 if inrange(rand,0.851,0.94)
-replace p1trvu1 =runiformint(4,26) if inrange(rand,0.941,0.945)
+replace p1trvu1=0 if rand<=0.56 & npervu1!=.
+replace p1trvu1=1 if inrange(rand,0.561,0.65) & npervu1!=.
+replace p1trvu1=2 if inrange(rand,0.651,0.85) & npervu1!=.
+replace p1trvu1=3 if inrange(rand,0.851,0.94) & npervu1!=.
+replace p1trvu1 =runiformint(4,26) if p1trvu1==. & npervu1!=.
 
 forval i=2/13{
 	gen p1trvu`i'=.
@@ -258,35 +264,35 @@ gen p1wrvu=.
 replace p1wrvu = 0 if rand<=0.49
 replace p1wrvu = 1 if inrange(rand,0.491,0.74)
 replace p1wrvu = 2 if inrange(rand,0.741,0.99)
-replace p1wrvu = runiformint(3,82) if rand>0.99
+replace p1wrvu = runiformint(3,82) if p1wrvu==.
 
 gen p1wrvu1=.
-replace p1wrvu1=0 if rand<=0.65
-replace p1wrvu1=1 if inrange(rand,0.651,0.85)
-replace p1wrvu1=2 if inrange(rand,0.851,0.94)
-replace p1wrvu1 =runiformint(3,18) if inrange(rand,0.941,0.945)
+replace p1wrvu1=0 if rand<=0.65 & npervu1!=.
+replace p1wrvu1=1 if inrange(rand,0.651,0.85) & npervu1!=.
+replace p1wrvu1=2 if inrange(rand,0.851,0.94) & npervu1!=.
+replace p1wrvu1 =runiformint(3,18) if p1wrvu1==. & npervu1!=.
 
 forval i= 2/13{
 	gen p1wrvu`i'=.
 	replace p1wrvu`i' = 0 if inrange(rand,randmiss`i',0.998)
 	if inrange(`i',1,3){
-		replace p1wrvu`i'=runiformint(1,18) if rand>=0.9981
+		replace p1wrvu`i'=runiformint(1,18) if rand > 0.998
 	}
 	if inrange(`i',4,5){
-		replace p1wrvu`i'=runiformint(1,70) if rand>=0.9981
+		replace p1wrvu`i'=runiformint(1,70) if rand > 0.998
 	}
 	if inrange(`i',6,15){
-		replace p1wrvu`i'=runiformint(1,15) if rand>=0.9981
+		replace p1wrvu`i'=runiformint(1,15) if rand > 0.998
 	}
 
 }
 
 *Create rrvu* variables;
 gen rrvu1=.
-replace rrvu1=0 if rand<=0.74
-replace rrvu1=1 if inrange(rand,0.741,0.89)
-replace rrvu1=2 if inrange(rand,0.891,0.94)
-replace rrvu1 =runiformint(3,18) if inrange(rand,0.941,0.945)
+replace rrvu1=0 if rand<=0.74 & npervu1!=.
+replace rrvu1=1 if inrange(rand,0.741,0.89) & npervu1!=.
+replace rrvu1=2 if inrange(rand,0.891,0.94) & npervu1!=.
+replace rrvu1 =runiformint(3,18) if rrvu1==. & npervu1!=.
 
 forval i=2/13{
 	gen rrvu`i'=.
@@ -295,7 +301,7 @@ forval i=2/13{
 		replace rrvu`i' = runiformint(2,18) if rand > 0.998
 	}
 	else{
-		replace npervu`i' = runiformint(2,15) if rand > 0.998
+		replace rrvu`i' = runiformint(2,15) if rand > 0.998
 	}
 }
 
@@ -303,7 +309,7 @@ gen rvu_epe = .
 replace rvu_epe=0 if rand<=0.49
 replace rvu_epe=1 if inrange(rand,0.491,0.85)
 replace rvu_epe=2 if inrange(rand,0.851,0.98)
-replace rvu_epe = runiformint(3,316) if rand>0.98
+replace rvu_epe = runiformint(3,316) if rvu_epe==.
 
 gen rvu_et = .
 replace rvu_et = 0 if rand<=0.49
@@ -311,7 +317,7 @@ replace rvu_et = 1 if inrange(rand,0.491,0.65)
 replace rvu_et = 2 if inrange(rand,0.651,0.74)
 replace rvu_et = 3 if inrange(rand,0.741,0.89)
 replace rvu_et = 4 if inrange(rand,0.891,0.98)
-replace rvu_et = runiformint(5,321) if rand>0.98
+replace rvu_et = runiformint(5,321) if rvu_et==.
 
 gen str2 skill1=""
 
@@ -319,7 +325,7 @@ replace skill1 = "1" if rand<=0.41
 replace skill1 = "2" if inrange(rand,0.411,0.73)
 replace skill1 = "3" if inrange(rand,0.731,0.91)
 replace skill1 = "4" if inrange(rand,0.911,0.99)
-replace skill1 = "1R" if rand>0.99
+replace skill1 = "1R" if skill1==""
 
 save "$file_p\fake_caper_bus.dta", replace 
 
