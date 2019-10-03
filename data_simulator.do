@@ -1,66 +1,89 @@
 /*
-Generate some simulated data.
+FROM V1 OF THE SAME NAME. Generate simulated claims data files - CAPER and SIDR.
 
 LAST UPDATE: 
-WHAT: ADAPT TO CALLING FROM MASTER FILE.
-WHEN: OCT 2, 2019
+WHAT: ADAPT TO CALLING FROM MASTER FILE. INCORPORATE CAPER BUSINESS HERE AS WELL.
+WHEN: OCT 3, 2019
 BY: AG
 */
 
 clear
 set seed 41
+set more off
+
+*********************************;
+*Create Zip code list;
+
+set obs 20000
+
+gen str5 ZIP_PATIENT_PDE = ""  
+replace ZIP_PATIENT_PDE = string(runiformint(10000,94305))
+label variable ZIP_PATIENT_PDE "" 
+
+bysort ZIP_PATIENT_PDE: keep if _n==1
+
+gen zip_key = _n
+
+tempfile zipcodes
+save `zipcodes', replace
+
+*****************************
+*Create assgndur values;
+clear
+
+set obs 1000
+
+gen str8 assgndur=""
+replace assgndur = string(runiformint(0,9)) + string(runiformint(0,9)) + string(runiformint(0,9)) + string(runiformint(0,9)) + string(runiformint(0,9))
+
+bysort assgndur: keep if _n==1
+keep in 1/900
+gen assgndur_key = _n
+
+tempfile assgndur
+save `assgndur', replace
+
+*****************************
+*Create msma values;
+
+clear
+set obs 20
+
+gen str2 msma=""
+replace msma= string(runiformint(0,9)) + string(runiformint(0,9))
+bysort msma: keep if _n==1
+drop if msma=="00"
+keep in 1/14
+
+gen msma_key = _n
+
+tempfile msma
+save `msma', replace
+
+*********************************;
+*Patient level file;
+
+clear
 
 *  observation numbers
-set obs 100000
-
-
-/* COMMENT OUT THE TWO WHICH ARE NOT YOURS TO RUN!
-local file_p = "/Users/tuk39938/Desktop/programs/team_production/"
-*local file_p = "C:\Users\atulgup\Dropbox (Penn)\Projects\Teams\team_production"
-*local file_p = "C:\Users\STEPHEN\Dropbox (Personal)\Army-Baylor\Research\Teams\team_production"
-*/
-
-* RENAME TO WHATEVER THE MERGE VARIABLE IS...
-
-gen x_MERGE_VAR = string(_n)
-label variable x_MERGE_VAR "MERGE ON THIS"
-
-gen MERGE_VAR = x_MERGE_VAR 
-label variable MERGE_VAR "MERGE ON THIS"
-
-* Variables:
-
-gen str12 PID_PDE_SPONSOR = ""  
-replace PID_PDE_SPONSOR = "PDE"+char(runiformint(65,90)) + char(runiformint(65,90)) + char(runiformint(65,90)) + char(runiformint(48,57)) + char(runiformint(65,90)) + char(runiformint(65,90)) + char(runiformint(48,57)) + char(runiformint(48,57)) + char(runiformint(48,57))
-label variable PID_PDE_SPONSOR "" 
+set obs 35000
 
 gen str12 PID_PDE_PATIENT = ""  
 replace PID_PDE_PATIENT = "PDE"+char(runiformint(65,90)) + char(runiformint(65,90)) + char(runiformint(65,90)) + char(runiformint(48,57)) + char(runiformint(65,90)) + char(runiformint(65,90)) + char(runiformint(48,57)) + char(runiformint(48,57)) + char(runiformint(48,57))
 label variable PID_PDE_PATIENT "" 
 
-gen str11 FLAG_DMDC_PITE_YYYYQ_SPONSOR = "NOT SPONSOR"  
-label variable FLAG_DMDC_PITE_YYYYQ_SPONSOR "" 
+bysort PID_PDE_PATIENT: keep if _n==1
 
-gen str1 FLAG_DMDC_PITE_YYYYQ_SERVICE = ""  
-label variable FLAG_DMDC_PITE_YYYYQ_SERVICE "always blank" 
+gen str12 PID_PDE_SPONSOR = ""  
+replace PID_PDE_SPONSOR = "PDE"+char(runiformint(65,90)) + char(runiformint(65,90)) + char(runiformint(65,90)) + char(runiformint(48,57)) + char(runiformint(65,90)) + char(runiformint(65,90)) + char(runiformint(48,57)) + char(runiformint(48,57)) + char(runiformint(48,57))
+label variable PID_PDE_SPONSOR "" 
+
+bysort PID_PDE_SPONSOR: keep if _n==1
 
 gen double DATE_BIRTH = 0
 replace DATE_BIRTH = runiformint(8300, 19600)
 format DATE_BIRTH %td
 label variable DATE_BIRTH "Patient DOB" 
-
-gen str1 PAYGRADE_PDE = ""  
-label variable PAYGRADE_PDE "always missing in data" 
-
-gen str5 ZIP_PATIENT_PDE = ""  
-replace ZIP_PATIENT_PDE = string(runiformint(78700,79200))
-label variable ZIP_PATIENT_PDE "" 
-
-gen str45 DMIS_PATIENT_REGISTER_NUMBER = ""  
-label variable DMIS_PATIENT_REGISTER_NUMBER "" 
-
-gen str1 ACV = ""  
-label variable ACV "" 
 
 gen str3 BENCATX = ""  
 gen benr = 1000000*runiform()
@@ -72,13 +95,6 @@ replace BENCATX = "DGR" if benr > 10000 & benr < 35000
 replace BENCATX = "DA" if benr > 35000
 drop benr
 label variable BENCATX "" 
-
-gen str2 DDS = ""  
-label variable DDS "missing 70%" 
-
-gen str4 DEERSENR = ""  
-replace DEERSENR = "0"+string(runiformint(100,464))
-label variable DEERSENR "" 
 
 gen str1 DSPONSVC = ""  
 gen dspr = runiform()
@@ -92,6 +108,52 @@ replace DSPONSVC = "W" if dspr >= 0.99 & dspr < 1
 drop dspr
 label variable DSPONSVC "" 
 
+gen str4 DEERSENR = ""  
+replace DEERSENR = "0"+string(runiformint(100,464))
+label variable DEERSENR "" 
+
+sort PID_PDE_PATIENT
+
+gen x_pat_sex = ""
+gen psr = runiform()
+replace x_pat_sex = "F" if psr < 0.26
+replace x_pat_sex = "M" if psr >= 0.26
+drop psr
+
+*Bring in zip codes;
+gen zip_key = runiformint(1,15000)
+
+merge m:1 zip_key using `zipcodes'
+drop if _m==2
+drop _m zip_key
+
+gen nobs = runiformint(1,5)
+
+*********************************;
+* Encounter level variables;
+
+expand 5
+
+bysort PID_PDE_PATIENT: keep if _n<=nobs
+bysort PID_PDE_PATIENT: gen ctr=_n
+
+*Encounter id;
+gen str64 encounter_key=""
+local c2use 0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ
+
+replace encounter_key = "0" + string(runiformint(0,9)) + string(runiformint(0,9)) + string(runiformint(0,9)) + "_"
+forval i=1/40{
+	replace encounter_key = encounter_key + substr("`c2use'", runiformint(1,length("`c2use'")),1)
+} 
+
+tempfile encounters
+save `encounters', replace
+*Will use this again for CAPER business;
+
+*********************************;
+*First create CAPER PATIENT AND SIDR (many vars in common);
+*This part of the code is from the original data_simulator file;
+
 gen double DATE_ADMISSION = 0
 replace DATE_ADMISSION = runiformint(19000, 21600)
 format DATE_ADMISSION %td
@@ -102,6 +164,23 @@ replace DATE_DISPOSITION = DATE_ADMISSION + runiformint(1,31)
 format DATE_DISPOSITION %td
 label variable DATE_DISPOSITION "" 
 
+*Change dates for patients who repeat so that repeat dates are within 180 days;
+* "second visit" -> change dates relative to previous.
+replace DATE_ADMISSION = DATE_DISPOSITION[_n-1] + runiformint(0,180) if ctr == 2
+replace DATE_DISPOSITION = DATE_ADMISSION + runiformint(1,20) if ctr == 2
+
+* "third visit"
+replace DATE_ADMISSION = DATE_DISPOSITION[_n-1] + runiformint(0,180) if ctr == 3
+replace DATE_DISPOSITION = DATE_ADMISSION + runiformint(1,20) if ctr == 3
+
+* "fourth visit"
+replace DATE_ADMISSION = DATE_DISPOSITION[_n-1] + runiformint(0,180) if ctr == 4
+replace DATE_DISPOSITION = DATE_ADMISSION + runiformint(1,20) if ctr == 4
+
+* "fifth visit"
+replace DATE_ADMISSION = DATE_DISPOSITION[_n-1] + runiformint(0,180) if ctr == 5
+replace DATE_DISPOSITION = DATE_ADMISSION + runiformint(1,20) if ctr == 5
+
 gen double DATE_INITIAL_ADMISSION = 0
 gen inadr = runiform()
 replace DATE_INITIAL_ADMISSION = DATE_ADMISSION + runiformint(-5,-1) if inadr > 0.95
@@ -110,6 +189,8 @@ drop inadr
 format DATE_INITIAL_ADMISSION %td
 label variable DATE_INITIAL_ADMISSION "" 
 
+drop nobs ctr
+	
 gen double DATE_INJURY = 0
 gen dinr = runiform()
 replace DATE_INJURY = DATE_ADMISSION + runiformint(-10, -1) if dinr > 0.95
@@ -160,8 +241,6 @@ label variable ADMDX ""
 gen str8 DX1 = "" 
 replace DX1 =  word( "`icds'" , ceil(`length'*runiform())) 
 label variable DX1 "" 
-
-
 
 gen str8 DX2 = ""  
 replace DX2 =  word( "`icds'" , ceil(`length'*runiform())) 
@@ -346,6 +425,7 @@ replace PROCQTY1 = "8" if prqr1 >= 0.96 & prqr1 < 0.97
 replace PROCQTY1 = "9" if prqr1 >= 0.97 & prqr1 <= 1
 replace PROCQTY1 = "" if PROC1 == ""
 drop prqr1
+
 * dates 
 gen DATE_STARTPROC1 = DATE_ADMISSION + runiformint(0,3)
 format DATE_STARTPROC1 %td
@@ -396,8 +476,6 @@ foreach nm of numlist 2(1)20{
 	replace DATE_STOPPROC`nm' = . if PROC1 == ""
 	replace DATE_STOPPROC`nm' = . if DATE_STARTPROC`nm' == .
 }
-
-
 
 
 * OTHER
@@ -566,37 +644,8 @@ replace SOURCE_TABLE = "MDR_SIDR_DOD_2011_2017" if star >= 0.43
 drop star 
 label variable SOURCE_TABLE "" 
 
-
-* Make some patients appear more than once.
-	* Also: dates of admission / disposition will now change so that admissions are w/in 180 days
-	
-
-gen repeatr = runiform()
-	sort PID_PDE_PATIENT
-	* "second visit" -> this can create a sequence of three if there are two repeatr > 0.7
-	replace PID_PDE_PATIENT = PID_PDE_PATIENT[_n-1] if repeatr > 0.7
-	bysort PID_PDE_PATIENT: gen ctr = _n 
-	* "third visit"
-	replace PID_PDE_PATIENT = PID_PDE_PATIENT[_n-1] if ctr[_n-1] == 2
-	drop ctr 
-	bysort PID_PDE_PATIENT: gen ctr = _n 
-	* "second visit" -> change dates relative to previous.
-	replace DATE_ADMISSION = DATE_DISPOSITION[_n-1] + runiformint(0,180) if ctr == 2
-	replace DATE_DISPOSITION = DATE_ADMISSION + runiformint(1,20) if ctr == 2
-	* "third visit"
-	replace DATE_ADMISSION = DATE_DISPOSITION[_n-1] + runiformint(0,180) if ctr == 3
-	replace DATE_DISPOSITION = DATE_ADMISSION + runiformint(1,20) if ctr == 3
-	* UN-FIXED: DATE_STARTPROC1 DATE_STOPPROC1 etc... These might be wrong.  
-
-	* add some two-visit patients, but don't overwrite three-visit patients changed above. 
-	replace PID_PDE_PATIENT = PID_PDE_PATIENT[_n-1] if repeatr < 0.7 & repeatr > 0.6 & ctr[_n-1] != 3 
-	drop ctr 
-	bysort PID_PDE_PATIENT: gen ctr = _n 
-	replace DATE_ADMISSION = DATE_DISPOSITION[_n-1] + runiformint(0,180) if ctr == 2
-	replace DATE_DISPOSITION = DATE_ADMISSION + runiformint(1,20) if ctr == 2
-	drop ctr repeatr
-	
-
+*********************************;
+*********************************;
 * ADDING THE SECOND FILE  
 	* direct link: https://github.com/austinbean/team_production/blob/d41689429cd61450366e2d4d509bc8d872370357/codebook.log#L3067
 	* this will generate from the first file so that the merging process is sensible
@@ -606,23 +655,18 @@ gen x_pid_pde_patient = PID_PDE_PATIENT
 
 gen x_pid_pde_sponsor = PID_PDE_SPONSOR
 
-gen x_flag_dmdc_pite_yyyyq_sponsor = FLAG_DMDC_PITE_YYYYQ_SERVICE
+*gen x_flag_dmdc_pite_yyyyq_sponsor = FLAG_DMDC_PITE_YYYYQ_SERVICE
 
-gen x_flag_dmdc_pite_yyyyq_service = FLAG_DMDC_PITE_YYYYQ_SERVICE
+*gen x_flag_dmdc_pite_yyyyq_service = FLAG_DMDC_PITE_YYYYQ_SERVICE
 
 gen x_date_birth_pde = DATE_BIRTH
+format x_date_birth_pde %td
 
 gen x_patient_zip_pde = ZIP_PATIENT_PDE
 
-gen x_encounter_key = char(runiformint(65,90)) + char(runiformint(48,57))
+gen x_encounter_key = encounter_key
 
-gen x_apptidno= char(runiformint(65,90)) + char(runiformint(48,57))
-
-gen x_pat_sex = ""
-gen psr = runiform()
-replace x_pat_sex = "F" if psr < 0.26
-replace x_pat_sex = "M" if psr >= 0.26
-drop psr
+gen x_apptidno = char(runiformint(65,90)) + char(runiformint(48,57))
 
 gen x_admdisp = ""
 gen admr = runiform()
@@ -690,15 +734,15 @@ gen ascr = runiform()
 replace x_asc13 = char(runiformint(48,48)) if ascr > 0.99999
 drop ascr 
 
-	* also an ICD-9 from the above list of 200
-gen complaint = word("`proclist'", ceil(200*runiform()))
+* also an ICD-9 from the above list of 200
+gen x_complaint = word("`proclist'", ceil(200*runiform()))
 
 
 * Random CPT from a list of 175
 local cptlist = "43640 43641 43644 43645 43770 43771 43772 43773 43774 43775 43800 43810 43820 43825 43840 43842 43843 43845 43846 43847 43848 43850 43855 43860 43865 43870 43880 43886 43887 43888 43286 43287 43288 11008 49491 49492 49495 49496 49500 49501 49505 49507 49520 49521 49525 49550 49553 49555 49557 49560 49561 49565 49566 49570 49572 49580 49582 49585 49587 49590 49600 49605 49606 49610 49611 49650 49651 49652 49653 49654 49655 49656 49657 49659 27125 27130 27132 27134 27137 27138 27236 33935 33945 58150 58152 58180 58200 58210 58240 58541 58542 58543 58544 58548 58550 58552 58553 58554 58570 58571 58572 58573 58951 58953 58954 58956 59525 58575 27438 27440 27441 27442 27443 27445 27446 27447 27486 27487 50340 50360 50365 50380 22220 22222 22224 22856 22857 22861 22862 22867 62287 62351 62380 63001 63003 63005 63011 63012 63015 63016 63017 63020 63030 63035 63040 63042 63045 63046 63047 63048 63050 63051 63055 63056 63064 63075 63077 63081 63082 63085 63086 63087 63088 63090 63091 63101 63102 63103 63170 63172 63173 63180 63182 63185 63190"
 local cptlength = 175
 
-	* There are 13 cpt and cpt_dx codes
+* There are 13 cpt and cpt_dx codes
 gen x_cpt_1 = word("`cptlist'", ceil(`cptlength'*runiform()))
 gen prcr1 = runiform()
 replace x_cpt_1 = "" if prcr1 > 0.8
@@ -833,7 +877,6 @@ gen psr = runiform()
 replace x_provspec3 = "" if psr > 0.97
 drop psr
 
-
 gen x_provstat1 = char(runiformint(65,66)) + char(runiformint(65,67)) + char(runiformint(65,75))
 gen pvr = runiform()
 replace x_provstat1 = "" if pvr < 0.37
@@ -857,8 +900,6 @@ drop rr
 gen x_id = string(runiformint(1000000,2000000))
 
 
-
-
 * Split the two datasets and save 
 
 preserve 
@@ -867,14 +908,269 @@ keep x_*
 
 rename x_* *
 
-save "$file_p\fake_dep_4.dta", replace 
+save "$file_p\fake_dep_4_v2.dta", replace 
 
 restore
 
 drop x_* 
 
-save "$file_p\fake_SIDR_DOD_Dep.dta", replace
+*No encounter key in SIDR
+drop encounter_key
 
-clear 
+save "$file_p\fake_SIDR_DOD_Dep_v2.dta", replace
+
+****************************************;
+*Now create caper-business, starting with same encounters and patient ids;
+
+use `encounters', clear
+
+*Drop vars not in caper-business;
+drop DATE_BIRTH BENCATX DSPONSVC DEERSENR x_pat_sex ZIP_PATIENT_PDE nobs ctr
+
+gen rand = runiform(0,1)
+
+gen assgndur_key = runiformint(1,900)
+
+merge m:1 assgndur_key using `assgndur'
+drop if _m==2
+drop _m assgndur_key
+replace assgndur="" if rand<=0.03
+
+sort PID_PDE_PATIENT encounter_key
+
+*Create cpt and different rvu codes;
+*Ideally should have taken these from the Caper-patient file. but they don't 
+*seem to be related. have different number of missing, and values are different.
+
+gen cptuos_1 = 1 if rand<=0.980
+replace cptuos_1 = 0 if inrange(rand,0.9801,0.983)
+replace cptuos_1 = runiformint(2,4) if inrange(rand,0.9831,0.985)
+
+
+forval i=2/13{
+	
+		gen randmiss`i' = runiform(0.9,0.99)		
+		local val = randmiss`i'[1]
+		replace randmiss`i' = `val'
+		gen cptuos_`i' = 1 if rand >= randmiss`i'
+		
+		if inrange(`i',2,3){
+			replace cptuos_`i' = runiformint(2,4) if rand >= 0.995
+		}
+		
+		if `i'>3{
+			replace cptuos_`i' = runiformint(2,900) if rand >= 0.998
+		}
+}
+
+*Bring in msma value;
+gen msma_key = runiformint(1,14)
+merge m:1 msma_key using `msma'
+drop if _m==2
+drop _m msma_key
+
+replace msma="" if rand <= 0.615
+
+sort PID_PDE_PATIENT encounter_key
+
+*Create npervu* variables;
+
+gen npervu1=.
+replace npervu1=0 if rand<=0.56
+replace npervu1=1 if inrange(rand,0.561,0.91)
+replace npervu1=2 if inrange(rand,0.911,0.94)
+replace npervu1 =runiformint(3,8) if inrange(rand,0.941,0.945)
+
+forval i=2/13{
+	gen npervu`i'=.
+	replace npervu`i' = runiformint(0,1) if inrange(rand,randmiss`i',0.998)
+	if (inrange(`i',2,3) | inrange(`i',12,13)) {
+		replace npervu`i' = runiformint(2,8) if rand > 0.998
+	}
+	else{
+		replace npervu`i' = runiformint(2,60) if rand > 0.998
+	}
+}
+
+*Create ntrvu* variables;
+
+*First one has no missing;
+gen ntrvu=.
+replace ntrvu = 0 if rand<=0.49
+replace ntrvu = 1 if inrange(rand,0.491,0.65)
+replace ntrvu = 2 if inrange(rand,0.651,0.749)
+replace ntrvu = 3 if inrange(rand,0.7491,0.85)
+replace ntrvu = 4 if inrange(rand,0.851,0.98)
+replace ntrvu = runiformint(5,321) if ntrvu==.
+
+gen ntrvu1=.
+replace ntrvu1=0 if rand<=0.56 & npervu1!=.
+replace ntrvu1=1 if inrange(rand,0.561,0.74) & npervu1!=.
+replace ntrvu1=2 if inrange(rand,0.741,0.89) & npervu1!=.
+replace ntrvu1=3 if inrange(rand,0.891,0.941) & npervu1!=.
+replace ntrvu1 =runiformint(4,26) if ntrvu1==. & npervu1!=.
+
+forval i=2/13{
+	gen ntrvu`i'=.
+	replace ntrvu`i'=runiformint(0,1) if inrange(rand,randmiss`i',0.995)
+	if inrange(`i',1,3){
+		replace ntrvu`i'=runiformint(2,26) if rand > 0.995
+	}
+	else{
+		replace ntrvu`i'=runiformint(2,150) if rand > 0.995
+	}
+}
+
+*Create nwrvu* variables;
+gen nwrvu=.
+replace nwrvu = 0 if rand<=0.49
+replace nwrvu = 1 if inrange(rand,0.491,0.74)
+replace nwrvu = 2 if inrange(rand,0.741,0.95)
+replace nwrvu = 3 if inrange(rand,0.951,0.99)
+replace nwrvu = runiformint(4,82) if nwrvu==.
+
+gen nwrvu1=.
+replace nwrvu1 = 0 if rand<=0.74 & npervu1!=.
+replace nwrvu1 = 1 if inrange(rand,0.741,0.89) & npervu1!=.
+replace nwrvu1 = 2 if inrange(rand,0.891,0.94) & npervu1!=.
+replace nwrvu1 = runiformint(3,18) if nwrvu1==. & npervu1!=.
+
+forval i=2/13{
+	gen nwrvu`i'=.
+	replace nwrvu`i' = 0 if inrange(rand,randmiss`i',0.998)
+	if inrange(`i',1,3){
+		replace nwrvu`i'=runiformint(1,18) if rand>0.998
+	}
+	if inrange(`i',4,5){
+		replace nwrvu`i'=runiformint(1,70) if rand>0.998
+	}
+	if inrange(`i',6,13){
+		replace nwrvu`i'=runiformint(1,15) if rand>0.998
+	}
+
+}
+
+*Create p1pervu* variables;
+gen p1pervu=.
+replace p1pervu = 0 if rand<=0.49
+replace p1pervu = 1 if inrange(rand,0.491,0.85)
+replace p1pervu = 2 if inrange(rand,0.851,0.99)
+replace p1pervu = runiformint(3,316) if p1pervu==.
+
+gen p1pervu1=.
+replace p1pervu1=0 if rand<=0.56 & npervu1!=.
+replace p1pervu1=1 if inrange(rand,0.561,0.91) & npervu1!=.
+replace p1pervu1=2 if inrange(rand,0.911,0.94) & npervu1!=.
+replace p1pervu1 =runiformint(3,8) if p1pervu1==. & npervu1!=.
+
+forval i=2/13{
+	gen p1pervu`i'=.
+	replace p1pervu`i' = runiformint(0,1) if inrange(rand,randmiss`i',0.998)
+	if (inrange(`i',2,3) | inrange(`i',12,13)) {
+		replace p1pervu`i' = runiformint(2,8) if rand > 0.998
+	}
+	else{
+		replace npervu`i' = runiformint(2,60) if rand > 0.998
+	}
+}
+
+*Create p1trvu* variables;
+gen p1trvu=.
+replace p1trvu = 0 if rand<=0.49
+replace p1trvu = 1 if inrange(rand,0.491,0.65)
+replace p1trvu = 2 if inrange(rand,0.651,0.749)
+replace p1trvu = 3 if inrange(rand,0.7491,0.85)
+replace p1trvu = 4 if inrange(rand,0.851,0.99)
+replace p1trvu = runiformint(5,321) if p1trvu==.
+
+gen p1trvu1=.
+replace p1trvu1=0 if rand<=0.56 & npervu1!=.
+replace p1trvu1=1 if inrange(rand,0.561,0.65) & npervu1!=.
+replace p1trvu1=2 if inrange(rand,0.651,0.85) & npervu1!=.
+replace p1trvu1=3 if inrange(rand,0.851,0.94) & npervu1!=.
+replace p1trvu1 =runiformint(4,26) if p1trvu1==. & npervu1!=.
+
+forval i=2/13{
+	gen p1trvu`i'=.
+	replace p1trvu`i' = runiformint(0,1) if inrange(rand,randmiss`i',0.998)
+	if inrange(`i',1,3){
+		replace p1trvu`i'=runiformint(2,26) if rand>0.998
+	}
+	else{
+		replace p1trvu`i'=runiformint(2,150) if rand>0.998
+	}
+}
+
+*Create p1wrvu* variables;
+gen p1wrvu=.
+replace p1wrvu = 0 if rand<=0.49
+replace p1wrvu = 1 if inrange(rand,0.491,0.74)
+replace p1wrvu = 2 if inrange(rand,0.741,0.99)
+replace p1wrvu = runiformint(3,82) if p1wrvu==.
+
+gen p1wrvu1=.
+replace p1wrvu1=0 if rand<=0.65 & npervu1!=.
+replace p1wrvu1=1 if inrange(rand,0.651,0.85) & npervu1!=.
+replace p1wrvu1=2 if inrange(rand,0.851,0.94) & npervu1!=.
+replace p1wrvu1 =runiformint(3,18) if p1wrvu1==. & npervu1!=.
+
+forval i= 2/13{
+	gen p1wrvu`i'=.
+	replace p1wrvu`i' = 0 if inrange(rand,randmiss`i',0.998)
+	if inrange(`i',1,3){
+		replace p1wrvu`i'=runiformint(1,18) if rand > 0.998
+	}
+	if inrange(`i',4,5){
+		replace p1wrvu`i'=runiformint(1,70) if rand > 0.998
+	}
+	if inrange(`i',6,15){
+		replace p1wrvu`i'=runiformint(1,15) if rand > 0.998
+	}
+
+}
+
+*Create rrvu* variables;
+gen rrvu1=.
+replace rrvu1=0 if rand<=0.74 & npervu1!=.
+replace rrvu1=1 if inrange(rand,0.741,0.89) & npervu1!=.
+replace rrvu1=2 if inrange(rand,0.891,0.94) & npervu1!=.
+replace rrvu1 =runiformint(3,18) if rrvu1==. & npervu1!=.
+
+forval i=2/13{
+	gen rrvu`i'=.
+	replace rrvu`i' = runiformint(0,1) if inrange(rand,randmiss`i',0.998)
+	if inrange(`i',2,3) {
+		replace rrvu`i' = runiformint(2,18) if rand > 0.998
+	}
+	else{
+		replace rrvu`i' = runiformint(2,15) if rand > 0.998
+	}
+}
+
+gen rvu_epe = .
+replace rvu_epe=0 if rand<=0.49
+replace rvu_epe=1 if inrange(rand,0.491,0.85)
+replace rvu_epe=2 if inrange(rand,0.851,0.98)
+replace rvu_epe = runiformint(3,316) if rvu_epe==.
+
+gen rvu_et = .
+replace rvu_et = 0 if rand<=0.49
+replace rvu_et = 1 if inrange(rand,0.491,0.65)
+replace rvu_et = 2 if inrange(rand,0.651,0.74)
+replace rvu_et = 3 if inrange(rand,0.741,0.89)
+replace rvu_et = 4 if inrange(rand,0.891,0.98)
+replace rvu_et = runiformint(5,321) if rvu_et==.
+
+gen str2 skill1=""
+
+replace skill1 = "1" if rand<=0.41
+replace skill1 = "2" if inrange(rand,0.411,0.73)
+replace skill1 = "3" if inrange(rand,0.731,0.91)
+replace skill1 = "4" if inrange(rand,0.911,0.99)
+replace skill1 = "1R" if skill1==""
+
+drop rand randmiss* 
+
+save "$file_p\fake_caper_bus.dta", replace 
 
 
