@@ -7,16 +7,15 @@ BY: AG
 */
 
 	
-local file_p = "/Users/austinbean/Desktop/programs/team_production/"
-*local file_p = "C:\Users\atulgup\Dropbox (Penn)\Projects\Teams\team_production"
-*local file_p = "C:\Users\STEPHEN\Dropbox (Personal)\Army-Baylor\Research\Teams\team_production"
+*global file_p = "/Users/austinbean/Desktop/programs/team_production/"
+*global file_p = "C:\Users\atulgup\Dropbox (Penn)\Projects\Teams\team_production"
+*global file_p = "C:\Users\STEPHEN\Dropbox (Personal)\Army-Baylor\Research\Teams\team_production"
 
-	* TODO CHANGE BACK -> $file_p
 	
-use "`file_p'fake_dep_4.dta", clear
+use "${file_p}fake_dep_4.dta", clear
  
  
-merge 1:1 MERGE_VAR using "`file_p'fake_SIDR_DOD_Dep.dta"
+merge 1:1 MERGE_VAR using "${file_p}fake_SIDR_DOD_Dep.dta"
 
 * "unique episode" -> kind of
 	gen episode_id = _n
@@ -72,7 +71,7 @@ preserve
 	* Reshape wide for one provider-month observation
 	bysort PROVNPI MNTH_IX (DRG_CT): gen nn = _n 
 	reshape wide MSDRG DRG_CT DRG_CT_*MNTH_PRIOR, i(PROVNPI ADM_MONTH ADM_YEAR) j(nn)
-	save "`file_p'drg_count_by_npi.dta", replace
+	save "${file_p}drg_count_by_npi.dta", replace
 restore 
 
 
@@ -112,7 +111,7 @@ preserve
 	* reshape to one record per doctor-month
 	bysort PROVNPI ADM_YEAR ADM_MONTH (DX_COUNT): gen nn = _n 
 	reshape wide DX DX_COUNT DX_CT_*MNTH_PRIOR, i(PROVNPI ADM_MONTH ADM_YEAR) j(nn)
-	save "`file_p'diag_code_count_by_npi.dta", replace
+	save "${file_p}diag_code_count_by_npi.dta", replace
 restore 
 
 	* PROCEDURES - cpt_, PROC
@@ -147,7 +146,7 @@ preserve
 	* reshape to create one provider month record 
 	bysort PROVNPI ADM_MONTH ADM_YEAR (CPT_COUNT): gen nn = _n 
 	reshape wide CPT CPT_COUNT CPT_CT_*MNTH_PRIOR, i(PROVNPI ADM_MONTH ADM_YEAR) j(nn)
-	save "`file_p'cpt_code_count_by_npi.dta", replace
+	save "${file_p}cpt_code_count_by_npi.dta", replace
 
 restore 
 	
@@ -194,24 +193,24 @@ preserve
 	* Reshape to create one provider month record
 	bysort PROVNPI ADM_MONTH ADM_YEAR (PROC_UNITS_COUNT): gen nn = _n 
 	reshape wide PROC PROC_UNITS_COUNT PROC_TOTAL_COUNT PROC_UNITS_*MNTH_PRIOR PROC_TOTAL_*MNTH_PRIOR, i(PROVNPI ADM_MONTH ADM_YEAR) j(nn)
-	save "`file_p'proc_count_by_npi.dta", replace 
+	save "${file_p}proc_count_by_npi.dta", replace 
 
 restore 
 		
 * Clean up, merge all volumes into single file 
 
 clear 
-use "`file_p'drg_count_by_npi.dta"
+use "${file_p}drg_count_by_npi.dta"
 
-merge m:1 PROVNPI ADM_YEAR ADM_MONTH using "`file_p'diag_code_count_by_npi.dta"
+merge m:1 PROVNPI ADM_YEAR ADM_MONTH using "${file_p}diag_code_count_by_npi.dta"
 drop _merge
 
-merge 1:1 PROVNPI ADM_YEAR ADM_MONTH using "`file_p'cpt_code_count_by_npi.dta"
+merge 1:1 PROVNPI ADM_YEAR ADM_MONTH using "${file_p}cpt_code_count_by_npi.dta"
 drop _merge 
 
-merge 1:1 PROVNPI ADM_YEAR ADM_MONTH using "`file_p'proc_count_by_npi.dta"
+merge 1:1 PROVNPI ADM_YEAR ADM_MONTH using "${file_p}proc_count_by_npi.dta"
 drop _merge 
 
-save "`file_p'ALL_counts_by_npi.dta", replace 
+save "${file_p}ALL_counts_by_npi.dta", replace 
 
 *END CODE;
