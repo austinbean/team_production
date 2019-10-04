@@ -2,7 +2,8 @@
 FROM V1 OF THE SAME NAME. Generate simulated claims data files - CAPER and SIDR.
 
 LAST UPDATE: 
-WHAT: ADAPT TO CALLING FROM MASTER FILE. INCORPORATE CAPER BUSINESS HERE AS WELL.
+WHAT: ADAPT TO CALLING FROM MASTER FILE. INCORPORATE CAPER BUSINESS HERE AS WELL. INPATIENT AND OUTPATIENT VISITS 
+		ARE SEQUENTIAL, NOT IDENTICAL AS EARLIER.
 WHEN: OCT 3, 2019
 BY: AG
 */
@@ -10,6 +11,9 @@ BY: AG
 clear
 set seed 41
 set more off
+
+*Set ratio of inpatient to total visits for patient
+local inpsh = 0.4
 
 *********************************;
 *Create Zip code list;
@@ -127,23 +131,37 @@ merge m:1 zip_key using `zipcodes'
 drop if _m==2
 drop _m zip_key
 
-gen nobs = runiformint(1,5)
+gen nobs = runiformint(1,10)
+gen numip = runiformint(0,(10*`inpsh'))
+replace numip = min(numip,nobs-2)
 
 *********************************;
 * Encounter level variables;
 
-expand 5
+expand 10
 
+*Keep only the # per patient determined by nobs;
 bysort PID_PDE_PATIENT: keep if _n<=nobs
+
 bysort PID_PDE_PATIENT: gen ctr=_n
+
+gen randip = runiform()
+gen ip = randip>0.5
+
+by PID_PDE_PATIENT: gen num_ip = sum(ip)
+
+replace ip=0 if num_ip>numip
+drop num_ip numip randip
 
 *Encounter id;
 gen str64 encounter_key=""
 local c2use 0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ
 
-replace encounter_key = "0" + string(runiformint(0,9)) + string(runiformint(0,9)) + string(runiformint(0,9)) + "_"
+replace encounter_key = "0" + string(runiformint(0,9)) + string(runiformint(0,9)) + string(runiformint(0,9)) + "_" ///
+	if ip==0
 forval i=1/40{
-	replace encounter_key = encounter_key + substr("`c2use'", runiformint(1,length("`c2use'")),1)
+	replace encounter_key = encounter_key + substr("`c2use'", runiformint(1,length("`c2use'")),1) ///
+		if ip==0
 } 
 
 tempfile encounters
@@ -166,24 +184,14 @@ label variable DATE_DISPOSITION ""
 
 *Change dates for patients who repeat so that repeat dates are within 180 days;
 * "second visit" -> change dates relative to previous.
-replace DATE_ADMISSION = DATE_DISPOSITION[_n-1] + runiformint(0,180) if ctr == 2
-replace DATE_DISPOSITION = DATE_ADMISSION + runiformint(1,20) if ctr == 2
-
-* "third visit"
-replace DATE_ADMISSION = DATE_DISPOSITION[_n-1] + runiformint(0,180) if ctr == 3
-replace DATE_DISPOSITION = DATE_ADMISSION + runiformint(1,20) if ctr == 3
-
-* "fourth visit"
-replace DATE_ADMISSION = DATE_DISPOSITION[_n-1] + runiformint(0,180) if ctr == 4
-replace DATE_DISPOSITION = DATE_ADMISSION + runiformint(1,20) if ctr == 4
-
-* "fifth visit"
-replace DATE_ADMISSION = DATE_DISPOSITION[_n-1] + runiformint(0,180) if ctr == 5
-replace DATE_DISPOSITION = DATE_ADMISSION + runiformint(1,20) if ctr == 5
+forval i=2/10{
+	replace DATE_ADMISSION = DATE_DISPOSITION[_n-1] + runiformint(0,180) if ctr == `i'
+	replace DATE_DISPOSITION = DATE_ADMISSION + runiformint(1,20) if ctr == `i'
+}
 
 gen double DATE_INITIAL_ADMISSION = 0
 gen inadr = runiform()
-replace DATE_INITIAL_ADMISSION = DATE_ADMISSION + runiformint(-5,-1) if inadr > 0.95
+replace DATE_INITIAL_ADMISSION = DATE_ADMISSION + runiformint(-2,-1) if inadr > 0.95
 replace DATE_INITIAL_ADMISSION = . if inadr <= 0.95
 drop inadr
 format DATE_INITIAL_ADMISSION %td
@@ -904,28 +912,35 @@ gen x_id = string(runiformint(1000000,2000000))
 
 preserve 
 
+keep if ip==0
+
 keep x_*
 
 rename x_* *
 
-save "$file_p\fake_dep_4_v2.dta", replace 
+save "$file_p\fake_dep_4.dta", replace 
 
 restore
 
-drop x_* 
+keep if ip==1
+
+drop x_* ip
 
 *No encounter key in SIDR
 drop encounter_key
 
-save "$file_p\fake_SIDR_DOD_Dep_v2.dta", replace
+save "$file_p\fake_SIDR_DOD_Dep.dta", replace
 
 ****************************************;
 *Now create caper-business, starting with same encounters and patient ids;
 
 use `encounters', clear
 
+*keep outpatient only;
+keep if ip==0
+
 *Drop vars not in caper-business;
-drop DATE_BIRTH BENCATX DSPONSVC DEERSENR x_pat_sex ZIP_PATIENT_PDE nobs ctr
+drop DATE_BIRTH BENCATX DSPONSVC DEERSENR x_pat_sex ZIP_PATIENT_PDE nobs ctr ip
 
 gen rand = runiform(0,1)
 
