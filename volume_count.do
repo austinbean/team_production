@@ -6,17 +6,16 @@ WHEN: OCT 2, 2019
 BY: AG
 */
 
-/*	
-local file_p = "/Users/tuk39938/Desktop/programs/team_production/"
-*local file_p = "C:\Users\atulgup\Dropbox (Penn)\Projects\Teams\team_production"
-*local file_p = "C:\Users\STEPHEN\Dropbox (Personal)\Army-Baylor\Research\Teams\team_production"
-*/
+	
+*global file_p = "/Users/austinbean/Desktop/programs/team_production/"
+*global file_p = "C:\Users\atulgup\Dropbox (Penn)\Projects\Teams\team_production"
+*global file_p = "C:\Users\STEPHEN\Dropbox (Personal)\Army-Baylor\Research\Teams\team_production"
 
 	
-use "$file_p\fake_dep_4.dta", clear
+use "${file_p}fake_dep_4.dta", clear
  
  
-merge 1:1 MERGE_VAR using "$file_p\fake_SIDR_DOD_Dep.dta"
+merge 1:1 MERGE_VAR using "${file_p}fake_SIDR_DOD_Dep.dta"
 
 * "unique episode" -> kind of
 	gen episode_id = _n
@@ -55,16 +54,24 @@ preserve
 	duplicates drop provnpi adm_year adm_month MSDRG, force 
 	keep provnpi adm_year adm_month mnth_ix MSDRG drg_ct 
 	rename *, upper 
-
-	bysort PROVNPI ADM_YEAR ADM_MONTH (DRG_CT): gen nn = _n 
-	* use mnth_ix here.
+	* Count DRGS by month
+	sort PROVNPI MSDRG MNTH_IX
+	bysort PROVNPI MSDRG (MNTH_IX): gen mdiff = MNTH_IX - MNTH_IX[_n+1]
+	replace mdiff = abs(mdiff)
+	expand mdiff, gen(expdd)
+	bysort PROVNPI MSDRG MNTH_IX expdd: gen expctr = _n if expdd == 1
+	replace MNTH_IX = MNTH_IX + expctr if expdd == 1
+	replace DRG_CT = 0 if expdd == 1
 	foreach k of numlist 1(1)12{
 		bysort PROVNPI MSDRG (MNTH_IX): gen DRG_CT_`k'MNTH_PRIOR = DRG_CT[_n-`k']
 		replace DRG_CT_`k'MNTH_PRIOR = 0 if DRG_CT_`k'MNTH_PRIOR == .
 	}
+	drop if expdd == 1
+	drop expctr expdd mdiff
+	* Reshape wide for one provider-month observation
+	bysort PROVNPI MNTH_IX (DRG_CT): gen nn = _n 
 	reshape wide MSDRG DRG_CT DRG_CT_*MNTH_PRIOR, i(PROVNPI ADM_MONTH ADM_YEAR) j(nn)
-	drop MNTH_IX
-	save "$file_p\drg_count_by_npi.dta", replace
+	save "${file_p}drg_count_by_npi.dta", replace
 restore 
 
 
@@ -87,16 +94,24 @@ preserve
 	keep provnpi adm_year adm_month mnth_ix DX dx_count 
 	duplicates drop provnpi adm_year adm_month DX, force 
 	rename *, upper
-
-	*BE CAREFUL - not all diagnoses appear every month
+	* count, but add a continuous sequence of months when any diagnosis is not present in a given month.
+	sort PROVNPI DX MNTH_IX
+	bysort PROVNPI DX (MNTH_IX): gen mdiff = MNTH_IX - MNTH_IX[_n+1]
+	replace mdiff = abs(mdiff)
+	expand mdiff, gen(expdd)
+	bysort PROVNPI DX MNTH_IX expdd: gen expctr = _n if expdd == 1
+	replace MNTH_IX = MNTH_IX + expctr if expdd == 1
+	replace DX_COUNT = 0 if expdd == 1
 	foreach k of numlist 1(1)12{
-		bysort PROVNPI DX (MNTH_IX): gen DX_CT_`k'MNTH_PRIOR = DX_COUNT[_n-`k'] if MNTH_IX - MNTH_IX[_n-`k'] == `k'
+		bysort PROVNPI DX (MNTH_IX): gen DX_CT_`k'MNTH_PRIOR = DX_COUNT[_n-`k']
 		replace DX_CT_`k'MNTH_PRIOR = 0 if DX_CT_`k'MNTH_PRIOR == .
 	}
+	drop if expdd == 1
+	drop expctr expdd mdiff 
+	* reshape to one record per doctor-month
 	bysort PROVNPI ADM_YEAR ADM_MONTH (DX_COUNT): gen nn = _n 
 	reshape wide DX DX_COUNT DX_CT_*MNTH_PRIOR, i(PROVNPI ADM_MONTH ADM_YEAR) j(nn)
-	save "$file_p\diag_code_count_by_npi.dta", replace
-
+	save "${file_p}diag_code_count_by_npi.dta", replace
 restore 
 
 	* PROCEDURES - cpt_, PROC
@@ -114,14 +129,24 @@ preserve
 	duplicates drop provnpi adm_year adm_month cpt, force 
 	keep provnpi adm_year adm_month cpt cpt_count mnth_ix
 	rename *, upper
+	* Count, but expand to make sure we have a continuous sequence of months.
+	sort PROVNPI CPT MNTH_IX
+	bysort PROVNPI CPT (MNTH_IX): gen mdiff = MNTH_IX - MNTH_IX[_n+1]
+	replace mdiff = abs(mdiff)
+	expand mdiff, gen(expdd)
+	bysort PROVNPI CPT MNTH_IX expdd: gen expctr = _n if expdd == 1
+	replace MNTH_IX = MNTH_IX + expctr if expdd == 1
+	replace CPT_COUNT = 0 if expdd == 1
 	foreach k of numlist 1(1)12{
-		bysort PROVNPI CPT (MNTH_IX): gen CPT_CT_`k'MNTH_PRIOR = CPT_COUNT[_n-`k'] if MNTH_IX - MNTH_IX[_n-`k'] == `k'
+		bysort PROVNPI CPT (MNTH_IX): gen CPT_CT_`k'MNTH_PRIOR = CPT_COUNT[_n-`k']
 		replace CPT_CT_`k'MNTH_PRIOR = 0 if CPT_CT_`k'MNTH_PRIOR == .
 	}
+	drop if expdd == 1
+	drop expctr expdd mdiff 
+	* reshape to create one provider month record 
 	bysort PROVNPI ADM_MONTH ADM_YEAR (CPT_COUNT): gen nn = _n 
-
 	reshape wide CPT CPT_COUNT CPT_CT_*MNTH_PRIOR, i(PROVNPI ADM_MONTH ADM_YEAR) j(nn)
-	save "$file_p\cpt_code_count_by_npi.dta", replace
+	save "${file_p}cpt_code_count_by_npi.dta", replace
 
 restore 
 	
@@ -146,36 +171,46 @@ preserve
 	duplicates drop provnpi adm_year adm_month PROC , force
 	keep provnpi adm_year adm_month PROC proc_units_count proc_total_count mnth_ix
 	rename *, upper 
-	foreach k of numlist 1(1)12{
-		bysort PROVNPI PROC (MNTH_IX): gen PROC_UNITS_`k'MNTH_PRIOR = PROC_UNITS_COUNT[_n-`k'] if MNTH_IX - MNTH_IX[_n-`k'] == `k'
-		replace PROC_UNITS_`k'MNTH_PRIOR = 0 if PROC_UNITS_`k'MNTH_PRIOR == .
-	}
-	
-	foreach k of numlist 1(1)12{
-		bysort PROVNPI PROC (MNTH_IX): gen PROC_TOTAL_`k'MNTH_PRIOR = PROC_TOTAL_COUNT[_n-`k'] if MNTH_IX - MNTH_IX[_n-`k'] == `k'
-		replace PROC_TOTAL_`k'MNTH_PRIOR = 0 if PROC_TOTAL_`k'MNTH_PRIOR == .
-	}
+	* EXPAND ONCE AND COMPUTE BOTH SUMS 
+	sort PROVNPI PROC MNTH_IX 
+	bysort PROVNPI PROC (MNTH_IX): gen mdiff = MNTH_IX - MNTH_IX[_n+1]
+	replace mdiff = abs(mdiff)
+	expand mdiff, gen(expdd)
+	bysort PROVNPI PROC MNTH_IX expdd: gen expctr = _n if expdd == 1
+	replace MNTH_IX = MNTH_IX + expctr if expdd == 1
+	replace PROC_UNITS_COUNT = 0 if expdd == 1
+	replace PROC_TOTAL_COUNT = 0 if expdd == 1
+		foreach k of numlist 1(1)12{
+			bysort PROVNPI PROC (MNTH_IX): gen PROC_UNITS_`k'MNTH_PRIOR = PROC_UNITS_COUNT[_n-`k'] 
+			replace PROC_UNITS_`k'MNTH_PRIOR = 0 if PROC_UNITS_`k'MNTH_PRIOR == .
+		}
+		foreach k of numlist 1(1)12{
+			bysort PROVNPI PROC (MNTH_IX): gen PROC_TOTAL_`k'MNTH_PRIOR = PROC_TOTAL_COUNT[_n-`k'] 
+			replace PROC_TOTAL_`k'MNTH_PRIOR = 0 if PROC_TOTAL_`k'MNTH_PRIOR == .
+		}
+	drop if expdd == 1
+	drop expctr expdd mdiff 
+	* Reshape to create one provider month record
 	bysort PROVNPI ADM_MONTH ADM_YEAR (PROC_UNITS_COUNT): gen nn = _n 
-
 	reshape wide PROC PROC_UNITS_COUNT PROC_TOTAL_COUNT PROC_UNITS_*MNTH_PRIOR PROC_TOTAL_*MNTH_PRIOR, i(PROVNPI ADM_MONTH ADM_YEAR) j(nn)
-	save "$file_p\proc_count_by_npi.dta", replace 
+	save "${file_p}proc_count_by_npi.dta", replace 
 
 restore 
 		
 * Clean up, merge all volumes into single file 
 
 clear 
-use "$file_p\drg_count_by_npi.dta"
+use "${file_p}drg_count_by_npi.dta"
 
-merge m:1 PROVNPI ADM_YEAR ADM_MONTH using "$file_p\diag_code_count_by_npi.dta"
+merge m:1 PROVNPI ADM_YEAR ADM_MONTH using "${file_p}diag_code_count_by_npi.dta"
 drop _merge
 
-merge 1:1 PROVNPI ADM_YEAR ADM_MONTH using "$file_p\cpt_code_count_by_npi.dta"
+merge 1:1 PROVNPI ADM_YEAR ADM_MONTH using "${file_p}cpt_code_count_by_npi.dta"
 drop _merge 
 
-merge 1:1 PROVNPI ADM_YEAR ADM_MONTH using "$file_p\proc_count_by_npi.dta"
+merge 1:1 PROVNPI ADM_YEAR ADM_MONTH using "${file_p}proc_count_by_npi.dta"
 drop _merge 
 
-save "$file_p\ALL_counts_by_npi.dta", replace 
+save "${file_p}ALL_counts_by_npi.dta", replace 
 
 *END CODE;
