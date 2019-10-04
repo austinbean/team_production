@@ -11,7 +11,7 @@ local file_p = "/Users/tuk39938/Desktop/programs/team_production/"
 *local file_p = "C:\Users\atulgup\Dropbox (Penn)\Projects\Teams\team_production"
 *local file_p = "C:\Users\STEPHEN\Dropbox (Personal)\Army-Baylor\Research\Teams\team_production"
 
-
+	* TODO CHANGE BACK -> $file_p
 	
 use "`file_p'/fake_dep_4.dta", clear
  
@@ -88,16 +88,24 @@ preserve
 	duplicates drop provnpi adm_year adm_month DX, force 
 	rename *, upper
 
-	*BE CAREFUL - not all diagnoses appear every month
-		* This won't get it -> for each k, it needs to check everything PRIOR w/in PROVNPI DX but watch years and months.
+	sort PROVNPI DX MNTH_IX
+	bysort PROVNPI DX (MNTH_IX): gen mdiff = MNTH_IX - MNTH_IX[_n+1]
+	replace mdiff = abs(mdiff)
+	expand mdiff, gen(expdd)
+	bysort PROVNPI DX MNTH_IX expdd: gen expctr = _n if expdd == 1
+	replace MNTH_IX = MNTH_IX + expctr if expdd == 1
+	replace DX_COUNT = 0 if expdd == 1
 	foreach k of numlist 1(1)12{
-		bysort PROVNPI DX (MNTH_IX): gen DX_CT_`k'MNTH_PRIOR = DX_COUNT[_n-`k'] if MNTH_IX - MNTH_IX[_n-`k'] == `k'
+		bysort PROVNPI DX (MNTH_IX): gen DX_CT_`k'MNTH_PRIOR = DX_COUNT[_n-`k']
 		replace DX_CT_`k'MNTH_PRIOR = 0 if DX_CT_`k'MNTH_PRIOR == .
 	}
+	drop if expdd == 1
+	drop expctr expdd mdiff 
+	
+	
 	bysort PROVNPI ADM_YEAR ADM_MONTH (DX_COUNT): gen nn = _n 
 	reshape wide DX DX_COUNT DX_CT_*MNTH_PRIOR, i(PROVNPI ADM_MONTH ADM_YEAR) j(nn)
 	save "$file_p\diag_code_count_by_npi.dta", replace
-
 restore 
 
 	* PROCEDURES - cpt_, PROC
@@ -115,6 +123,10 @@ preserve
 	duplicates drop provnpi adm_year adm_month cpt, force 
 	keep provnpi adm_year adm_month cpt cpt_count mnth_ix
 	rename *, upper
+	
+	
+	
+	
 	foreach k of numlist 1(1)12{
 		bysort PROVNPI CPT (MNTH_IX): gen CPT_CT_`k'MNTH_PRIOR = CPT_COUNT[_n-`k'] if MNTH_IX - MNTH_IX[_n-`k'] == `k'
 		replace CPT_CT_`k'MNTH_PRIOR = 0 if CPT_CT_`k'MNTH_PRIOR == .
