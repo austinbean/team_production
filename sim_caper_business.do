@@ -12,6 +12,11 @@ clear
 set seed 41
 set more off
 
+do "/Users/tuk39938/Desktop/programs/team_production/master_filepaths.do"
+*do "C:\Users\atulgup\Dropbox (Penn)\Projects\Teams\team_production\master_filepaths.do"
+*do "C:\Users\STEPHEN\Dropbox (Personal)\Army-Baylor\Research\Teams\team_production\master_filepaths.do"
+
+
 *****************************
 *Create assgndur values;
 set obs 1000
@@ -327,7 +332,7 @@ replace skill1 = "3" if inrange(rand,0.731,0.91)
 replace skill1 = "4" if inrange(rand,0.911,0.99)
 replace skill1 = "1R" if skill1==""
 
-save "$file_p\fake_caper_bus.dta", replace 
+save "${file_p}fake_caper_bus.dta", replace 
 
 
 

@@ -9,8 +9,12 @@ WHEN: OCT 4, 2019
 BY : AG
 */
 	
+do "/Users/tuk39938/Desktop/programs/team_production/master_filepaths.do"
+*do "C:\Users\atulgup\Dropbox (Penn)\Projects\Teams\team_production\master_filepaths.do"
+*do "C:\Users\STEPHEN\Dropbox (Personal)\Army-Baylor\Research\Teams\team_production\master_filepaths.do"
 
-cd "$file_p"
+
+cd "${file_p}"
 local sentinel_events = "V053 V3000 9955 V3001 640 7746 V290 7661 9983 V7219 V502 76528 7742 77989 7706 76519 77089 77931 769 76529 76518 9604 9915 V3101 605 9390 77181 76527"
 
 *Set moratorium period;

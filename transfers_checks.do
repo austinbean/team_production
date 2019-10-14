@@ -9,6 +9,11 @@ LAST UPDATE: ADAPT TO BEING CALLED BY MASTER FILE.
 		BY : AG
 */
 
+do "/Users/tuk39938/Desktop/programs/team_production/master_filepaths.do"
+*do "C:\Users\atulgup\Dropbox (Penn)\Projects\Teams\team_production\master_filepaths.do"
+*do "C:\Users\STEPHEN\Dropbox (Personal)\Army-Baylor\Research\Teams\team_production\master_filepaths.do"
+
+
 cap program drop prog_check_transfers
 program define prog_check_transfers
 
@@ -22,7 +27,7 @@ clear all
 local file_p = "C:\Users\atulgup\Dropbox (Penn)\Projects\Teams\team_production\"
 *local file_p = "C:\Users\STEPHEN\Dropbox (Personal)\Army-Baylor\Research\Teams\team_production"*/
 
-use "$file_p\fake_army_master", clear
+use "${file_p}fake_army_master", clear
 
 *Set last date in army master;
 local last_snp = td(1oct2016)

@@ -12,6 +12,11 @@ clear
 set seed 41
 set more off
 
+do "/Users/tuk39938/Desktop/programs/team_production/master_filepaths.do"
+*do "C:\Users\atulgup\Dropbox (Penn)\Projects\Teams\team_production\master_filepaths.do"
+*do "C:\Users\STEPHEN\Dropbox (Personal)\Army-Baylor\Research\Teams\team_production\master_filepaths.do"
+
+
 *Set ratio of inpatient to total visits for patient
 local inpsh = 0.4
 
@@ -1186,6 +1191,6 @@ replace skill1 = "1R" if skill1==""
 
 drop rand randmiss* 
 
-save "$file_p\fake_caper_bus.dta", replace 
+save "${file_p}fake_caper_bus.dta", replace 
 
 

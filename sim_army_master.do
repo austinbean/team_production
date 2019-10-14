@@ -306,7 +306,7 @@ replace PN_AGE_QY=. if DATE_BIRTH_PDE==.
 
 drop unif
 
-save "$file_p\fake_army_master.dta", replace 
+save "${file_p}fake_army_master.dta", replace 
 
 end
 

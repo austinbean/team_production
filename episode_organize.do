@@ -18,13 +18,12 @@ WHEN: OCT 2, 2019
 BY: AG	
 */
 
-/*	
-local file_p = "/Users/tuk39938/Desktop/programs/team_production/"
-*local file_p = "C:\Users\atulgup\Dropbox (Penn)\Projects\Teams\team_production"
-*local file_p = "C:\Users\STEPHEN\Dropbox (Personal)\Army-Baylor\Research\Teams\team_production"
-*/
+do "/Users/tuk39938/Desktop/programs/team_production/master_filepaths.do"
+*do "C:\Users\atulgup\Dropbox (Penn)\Projects\Teams\team_production\master_filepaths.do"
+*do "C:\Users\STEPHEN\Dropbox (Personal)\Army-Baylor\Research\Teams\team_production\master_filepaths.do"
 
-use "$file_p\fake_SIDR_DOD_Dep.dta", clear
+
+use "${file_p}fake_SIDR_DOD_Dep.dta", clear
  
  
 * COMMENTS:
@@ -128,7 +127,7 @@ use "$file_p\fake_SIDR_DOD_Dep.dta", clear
 			keep if DATE_ADMISSION != .
 			rename lost visit_lost
 			label variable visit_lost "visit will not generate follow-ups"
-			save "$file_p\lost_visits.dta", replace
+			save "${file_p}lost_visits.dta", replace
 		restore 
 
 
@@ -181,7 +180,7 @@ Identify ALL readmissions within some set of thresholds, here 30 60 and 90 days
 			gen byte is_`day_threshold'_follow_up_`vis' = 1
 			label variable is_`day_threshold'_follow_up_`vis' "this visit is a `day_threshold' follow-up"
 				* this part saves a BUNCH of temporaries - they are removed in the next loop.
-			save "$file_p\follow_ups_`day_threshold'd_`vis'vis.dta", replace
+			save "${file_p}follow_ups_`day_threshold'd_`vis'vis.dta", replace
 			
 		restore 
 		}
@@ -192,16 +191,16 @@ Identify ALL readmissions within some set of thresholds, here 30 60 and 90 days
 	foreach day_threshold of numlist 30 60 90{
 		local stop_at = `max_readmit'-1
 		
-		use "$file_p\follow_ups_`day_threshold'd_1vis.dta", clear
+		use "${file_p}follow_ups_`day_threshold'd_1vis.dta", clear
 			foreach nm of numlist 2(1)`stop_at'{
-				append using "$file_p\follow_ups_`day_threshold'd_`nm'vis.dta"
+				append using "${file_p}follow_ups_`day_threshold'd_`nm'vis.dta"
 
 					* if disk space or clutter in folders is a concern, uncomment the remove command which follows.
-				rm "$file_p\follow_ups_`day_threshold'd_`nm'vis.dta"
+				rm "${file_p}follow_ups_`day_threshold'd_`nm'vis.dta"
 			}
-		rm "$file_p\follow_ups_`day_threshold'd_1vis.dta"
+		rm "${file_p}follow_ups_`day_threshold'd_1vis.dta"
 		
-		save "$file_p\follow_ups_`day_threshold'd.dta", replace
+		save "${file_p}follow_ups_`day_threshold'd.dta", replace
 	}
 	
 
@@ -210,7 +209,7 @@ Identify ALL readmissions within some set of thresholds, here 30 60 and 90 days
 	* "lost" events will not generate follow-ups. 
 
 	foreach day_threshold of numlist 30 60 90{
-		use "$file_p\follow_ups_`day_threshold'd.dta", clear
+		use "${file_p}follow_ups_`day_threshold'd.dta", clear
 		sort PID_PDE_PATIENT DATE_ADMISSION	
 		collapse (firstnm) following_up_from_* is_`day_threshold'_follow_up_* lost, by(PID_PDE_PATIENT DATE_ADMISSION DATE_DISPOSITION)
 		reshape long following_up_from_ is_`day_threshold'_follow_up_,  i(PID_PDE_PATIENT DATE_ADMISSION) j(ctt)
@@ -223,7 +222,7 @@ Identify ALL readmissions within some set of thresholds, here 30 60 and 90 days
 		rename is_`day_threshold'_follow_up_ is_`day_threshold'_follow_up
 		label variable following_up_from_`day_threshold' "orig. date to which this is `day_threshold' follow-up"
 		label variable is_`day_threshold'_follow_up "`day_threshold' day follow up from earlier"
-		save "$file_p\follow_ups_`day_threshold'd.dta", replace
+		save "${file_p}follow_ups_`day_threshold'd.dta", replace
 	}
 	
 	
@@ -233,7 +232,7 @@ Identify ALL readmissions within some set of thresholds, here 30 60 and 90 days
 	foreach day_threshold of numlist 30 60 90{
 
 	
-		use "$file_p\follow_ups_`day_threshold'd.dta", clear
+		use "${file_p}follow_ups_`day_threshold'd.dta", clear
 		drop lost
 		sort PID_PDE_PATIENT following_up_from_`day_threshold'
 		bysort PID_PDE_PATIENT following_up_from_`day_threshold' (DATE_ADMISSION): gen follow_ups = _n 
@@ -245,30 +244,30 @@ Identify ALL readmissions within some set of thresholds, here 30 60 and 90 days
 		rename following_up_from_`day_threshold' DATE_ADMISSION 
 		egen num_`day_threshold'_follow_ups = rownonmiss(follow_up_ad*)
 		label variable num_`day_threshold'_follow_ups "has N follow ups w/in `day_threshold' d"
-		save "$file_p\num_follups_`day_threshold'd.dta", replace
+		save "${file_p}num_follups_`day_threshold'd.dta", replace
 	}
 
 	
 * Merge back to original:
 
-	use "$file_p\fake_SIDR_DOD_Dep.dta", clear
+	use "${file_p}fake_SIDR_DOD_Dep.dta", clear
 	
 	* Adds 30 60 90 day follow-ups for each visit 
 	foreach day_threshold of numlist 30 60 90{
-		merge m:1 PID_PDE_PATIENT DATE_ADMISSION using "$file_p\follow_ups_`day_threshold'd.dta", nogen
+		merge m:1 PID_PDE_PATIENT DATE_ADMISSION using "${file_p}follow_ups_`day_threshold'd.dta", nogen
 		replace is_`day_threshold'_follow_up = 0 if is_`day_threshold'_follow_up == .
 	}
 	
 	* Adds indicator whether visit has follow ups or not 
 		* There are unmatched from *using* - that is not possible.  
 	foreach day_threshold of numlist 30 60 90{
-		merge m:1 PID_PDE_PATIENT DATE_ADMISSION using "$file_p\num_follups_`day_threshold'd.dta", nogen
+		merge m:1 PID_PDE_PATIENT DATE_ADMISSION using "${file_p}num_follups_`day_threshold'd.dta", nogen
 		replace has_`day_threshold'_follow_ups = 0 if has_`day_threshold'_follow_ups == .
 	}
 	
 	* Adds indicator for lost visits.
-	merge m:1 PID_PDE_PATIENT DATE_ADMISSION using "$file_p\lost_visits.dta", nogen
+	merge m:1 PID_PDE_PATIENT DATE_ADMISSION using "${file_p}lost_visits.dta", nogen
 
-	save "$file_p\fake_SIDR_DOD_Dep_readmits.dta", replace
+	save "${file_p}fake_SIDR_DOD_Dep_readmits.dta", replace
 	
 	
