@@ -7,9 +7,9 @@ BY: AG
 */
 
 	
-*global file_p = "/Users/austinbean/Desktop/programs/team_production/"
-*global file_p = "C:\Users\atulgup\Dropbox (Penn)\Projects\Teams\team_production"
-*global file_p = "C:\Users\STEPHEN\Dropbox (Personal)\Army-Baylor\Research\Teams\team_production"
+do "/Users/tuk39938/Desktop/programs/team_production/master_filepaths.do"
+*do "C:\Users\atulgup\Dropbox (Penn)\Projects\Teams\team_production\master_filepaths.do"
+*do "C:\Users\STEPHEN\Dropbox (Personal)\Army-Baylor\Research\Teams\team_production\master_filepaths.do"
 
 	
 use "${file_p}fake_dep_4.dta", clear
