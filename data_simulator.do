@@ -923,7 +923,7 @@ keep x_*
 
 rename x_* *
 
-save "$file_p\fake_dep_4.dta", replace 
+save "${file_p}fake_dep_4.dta", replace 
 
 restore
 
@@ -934,7 +934,7 @@ drop x_* ip
 *No encounter key in SIDR
 drop encounter_key
 
-save "$file_p\fake_SIDR_DOD_Dep.dta", replace
+save "${file_p}fake_SIDR_DOD_Dep.dta", replace
 
 ****************************************;
 *Now create caper-business, starting with same encounters and patient ids;
