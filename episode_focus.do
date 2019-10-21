@@ -121,7 +121,9 @@ use "${file_p}fake_SIDR_DOD_Dep.dta"
 					local next_vis =`prior_vis'+1
 					foreach current_vis of numlist `next_vis'(1)`mxdx'{
 						* multiple DX per visit, so this checks whether *admission* dates are different to make sure the visit is different - e.g., no follow-ups from same visit.  
-						replace readmits_vis_`daylim'_`prior_vis' = readmits_vis_`daylim'_`prior_vis' + 1 if (DATE_ADMISSION`current_vis' - DATE_DISPOSITION`prior_vis' < `daylim') & (DATE_ADMISSION`current_vis' - DATE_ADMISSION`prior_vis' > 0) 
+						
+						* TODO - check nonmissingness of diagnosis!
+						replace readmits_vis_`daylim'_`prior_vis' = readmits_vis_`daylim'_`prior_vis' + 1 if (DATE_ADMISSION`current_vis' - DATE_DISPOSITION`prior_vis' < `daylim') & (DATE_ADMISSION`current_vis' - DATE_ADMISSION`prior_vis' > 0) & DX`current_vis' != "" 
 					}
 				}
 			}
@@ -162,3 +164,61 @@ use "${file_p}fake_SIDR_DOD_Dep.dta"
 	
 	
 * CPT Codes - TODO.  
+
+* Use SIDR for CPT and DX/ICD-9
+use "${file_p}fake_dep_4.dta", clear
+
+	* TODO - this does the count by enc_date.  Still need to merge on previous to get disposition date.  
+	* question... encdate is the date something happened, e.g., third day of a five day admission?  Then above concern not important.
+	* TODO - do we want to track same-day procedures?  This is tricky.  Procedure done badly -> immediate, emergency follow up -> same day
+	format encdate %td // for readability in fake data.  
+	rename *, upper
+
+
+	keep PID_PDE_PATIENT ENCDATE CPT_*
+	reshape long CPT_ , i(PID_PDE_PATIENT ENCDATE) j(ctr)
+	drop if CPT_ == ""
+	sort PID_PDE_PATIENT ENCDATE ctr 
+	drop ctr 
+	bysort PID_PDE_PATIENT (ENCDATE): gen cptcx = _n
+	summarize cptcx
+	local max_cpt = `r(max)'
+	reshape wide CPT_ ENCDATE  , i(PID_PDE_PATIENT) j(cptcx)
+	foreach daylim of numlist 30 60 90 { 
+		foreach vis1 of numlist 1(1)`max_cpt'{
+			gen readmitsd`daylim'd_`vis1' = 0
+			foreach vis2 of numlist 1(1)`max_cpt'{
+			    * only checks if the second CPT happened same day or later, that it is within daylim, and that later visits are not missing
+				replace readmitsd`daylim'd_`vis1' = readmitsd`daylim'd_`vis1' + 1 if (ENCDATE`vis2' - ENCDATE`vis1') > 0 & (ENCDATE`vis2' - ENCDATE`vis1') < `daylim' & CPT_`vis2' != "" & CPT_`vis1' != "" 
+			}
+		}
+	}
+	keep PID_PDE_PATIENT CPT_* ENCDATE* readmits* 
+	reshape long CPT_ ENCDATE readmitsd30d_ readmitsd60d_ readmitsd90d_ , i(PID_PDE_PATIENT) j(pctr)
+	foreach days of numlist 30 60 90{
+			replace readmitsd`days'd_ = 0 if readmitsd`days'd_ == .
+	}
+	rename CPT_ CPT 
+	drop if CPT == ""
+	rename readmits*_ readmits* 
+	drop pctr PID_PDE_PATIENT ENCDATE
+	sort CPT 
+	bysort CPT: gen tr_i = _n 
+	bysort CPT: egen total_obs = max(tr_i)
+	drop tr_i 
+	foreach days of numlist 30 60 90 {
+		gen f_u_c_`days' = 0
+		replace f_u_c_`days' = 1 if readmitsd`days'd > 0 
+		bysort CPT: egen tfu_`days' = sum(f_u_c_`days')
+		gen frac_follow_up_`days' = tfu_`days'/total_obs 
+		label variable frac_follow_up_`days' "Frac. of Visits w/ Follow up before `days'"
+	}
+	foreach days of numlist 30 60 90{
+		bysort CPT: egen total_fu_visits_`days' = sum(readmitsd`days'd)
+		label variable total_fu_visits_`days' "Total number of follow-ups before `days'"
+	}
+	keep CPT frac_follow_up* total_fu_visits_* total_obs 
+	duplicates drop CPT, force 
+	* sadly nothing akin to icd9 check as above.
+	save "${file_p}freq_follow_ups_cpt.dta", replace
+	
