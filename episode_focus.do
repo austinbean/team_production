@@ -14,7 +14,7 @@ Sum total count / Sum Redmissions
 
 clear 
 
-do "/Users/tuk39938/Desktop/programs/team_production/master_filepaths.do"
+do "/Users/austinbean/Desktop/programs/team_production/master_filepaths.do"
 *do "C:\Users\atulgup\Dropbox (Penn)\Projects\Teams\team_production\master_filepaths.do"
 *do "C:\Users\STEPHEN\Dropbox (Personal)\Army-Baylor\Research\Teams\team_production\master_filepaths.do"
 
@@ -109,10 +109,12 @@ use "${file_p}fake_SIDR_DOD_Dep.dta"
 		keep PID_PDE_PATIENT DATE_* DX* 
 		keep if DX != ""
 		bysort PID_PDE_PATIENT: gen dxct = _n 	
-		summarize dxct 
+		summarize dxct, d
 		local mxdx = `r(max)'
+		drop DX // dropping diagnoses makes the reshaped data 'narrower' by quite a bit
+		* Ok this is pretty stupid but... can't drop the diagnoses, but CAN do the following: save a separate file w/ the diagnoses, drop everything but the dates, count total follow-up visits generated from any date, merge back counts so each diagnosis on any date gets the full count for all follow-up periods, merge that back in, then do the same procedure as below.  
 			* For the most frequently readmitted patients, this is going to be very wide.  
-		reshape wide DX DATE_ADMISSION DATE_DISPOSITION, i(PID_PDE_PATIENT) j(dxct)
+		reshape wide DATE_ADMISSION DATE_DISPOSITION, i(PID_PDE_PATIENT) j(dxct)
 		* Resembles previous loop but is not the same - must check admission date not on same day.  
 		foreach daylim of numlist 30 60 90{		
 				local stopping = `mxdx'-1
