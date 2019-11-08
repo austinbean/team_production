@@ -14,7 +14,7 @@ Sum total count / Sum Redmissions
 
 clear 
 
-do "/Users/austinbean/Desktop/programs/team_production/master_filepaths.do"
+do "/Users/tuk39938/Desktop/programs/team_production/master_filepaths.do"
 *do "C:\Users\atulgup\Dropbox (Penn)\Projects\Teams\team_production\master_filepaths.do"
 *do "C:\Users\STEPHEN\Dropbox (Personal)\Army-Baylor\Research\Teams\team_production\master_filepaths.do"
 
@@ -97,6 +97,44 @@ use "${file_p}fake_SIDR_DOD_Dep.dta"
 		save "${file_p}freq_follow_ups_adm_dx_only.dta", replace
 	restore	
 
+* create temp file to handle problem with width of next part 	
+preserve
+		keep PID_PDE_PATIENT ADMDX DX DATE_* 
+		bysort PID_PDE_PATIENT DATE_ADMISSION: gen pctr = _n 
+		bysort PID_PDE_PATIENT DATE_ADMISSION: egen pc = max(pctr)
+		drop pctr 
+		expand 2 if pc == 1, gen(expdr)
+		replace DX = ADMDX if expdr == 1
+		keep PID_PDE_PATIENT DATE_* DX* 
+		keep if DX != ""
+		gen tc = 1
+		bysort PID_PDE_PATIENT DATE_ADMISSION: egen vdxct = sum(tc)
+		drop tc
+		duplicates drop PID_PDE_PATIENT DATE_ADMISSION, force
+		drop DX 
+		bysort PID_PDE_PATIENT (DATE_ADMISSION): gen pctr = _n 
+		summarize pctr, d 
+		local mxvs = `r(max)'
+		reshape wide DATE_ADMISSION DATE_DISPOSITION vdxct, i(PID_PDE_PATIENT) j(pctr)
+		foreach daylim of numlist 30 60 90 {
+			local stopping = `mxvs'-1 
+			foreach prior_vis of numlist 1(1)`stopping'{
+				gen read_vis_`daylim'_`prior_vis' = 0 
+				local next_vis = `prior_vis'+1
+				foreach current_vis of numlist `next_vis'(1)`mxvs'{
+					replace read_vis_`daylim'_`prior_vis' = read_vis_`daylim'_`prior_vis' + vdxct`current_vis' if (DATE_ADMISSION`current_vis' - DATE_DISPOSITION`prior_vis' < `daylim') & (DATE_ADMISSION`current_vis' - DATE_ADMISSION`prior_vis' > 0)
+				}
+			}
+		}
+		reshape long DATE_ADMISSION DATE_DISPOSITION vdxct read_vis_30_ read_vis_60_ read_vis_90_ , i(PID_PDE_PATIENT) j(vctr)
+		drop if DATE_ADMISSION == . 
+		rename read_vis_*_ readmits_vis_*
+		foreach daylim of numlist 30 60 90 {
+			replace readmits_vis_`daylim' = 0 if readmits_vis_`daylim' == .
+		}
+		drop vctr vdxct 
+		save "${file_p}temp_follow_up_count.dta", replace 
+restore 
 
 * Do the same with ALL diagnoses (incl admitting.)
 	preserve
@@ -111,32 +149,13 @@ use "${file_p}fake_SIDR_DOD_Dep.dta"
 		bysort PID_PDE_PATIENT: gen dxct = _n 	
 		summarize dxct, d
 		local mxdx = `r(max)'
-		drop DX // dropping diagnoses makes the reshaped data 'narrower' by quite a bit
-		* Ok this is pretty stupid but... can't drop the diagnoses, but CAN do the following: save a separate file w/ the diagnoses, drop everything but the dates, count total follow-up visits generated from any date, merge back counts so each diagnosis on any date gets the full count for all follow-up periods, merge that back in, then do the same procedure as below.  
-			* For the most frequently readmitted patients, this is going to be very wide.  
-		reshape wide DATE_ADMISSION DATE_DISPOSITION, i(PID_PDE_PATIENT) j(dxct)
-		* Resembles previous loop but is not the same - must check admission date not on same day.  
-		foreach daylim of numlist 30 60 90{		
-				local stopping = `mxdx'-1
-				foreach prior_vis of numlist 1(1)`stopping'{
-					gen readmits_vis_`daylim'_`prior_vis' = 0
-					local next_vis =`prior_vis'+1
-					foreach current_vis of numlist `next_vis'(1)`mxdx'{
-						* multiple DX per visit, so this checks whether *admission* dates are different to make sure the visit is different - e.g., no follow-ups from same visit.  
-						
-						* TODO - check nonmissingness of diagnosis!
-						replace readmits_vis_`daylim'_`prior_vis' = readmits_vis_`daylim'_`prior_vis' + 1 if (DATE_ADMISSION`current_vis' - DATE_DISPOSITION`prior_vis' < `daylim') & (DATE_ADMISSION`current_vis' - DATE_ADMISSION`prior_vis' > 0) & DX`current_vis' != "" 
-					}
-				}
-			}
-		keep PID_PDE_PATIENT DX* DATE_ADMISSION* DATE_DISPOSITION* readmits_*
-		reshape long DX DATE_ADMISSION DATE_DISPOSITION readmits_vis_30_ readmits_vis_60_ readmits_vis_90_, i(PID_PDE_PATIENT)
-		drop _j 
+	* every DX code receives all follow up counts 
+		merge m:1 PID_PDE_PATIENT DATE_ADMISSION DATE_DISPOSITION using "${file_p}temp_follow_up_count.dta"
+		drop if _merge != 3 
+		drop _merge 
 		drop if DX == ""
-		foreach days of numlist 30 60 90{
-			replace readmits_vis_`days'_ = 0 if readmits_vis_`days'_ == .
-		}
-		drop PID_PDE_PATIENT DATE_ADMISSION DATE_DISPOSITION 
+// HERE... 
+		drop PID_PDE_PATIENT DATE_ADMISSION DATE_DISPOSITION dxct
 		sort DX 
 		bysort DX: gen tv_i = _n 
 		bysort DX: egen total_obs = max(tv_i)
@@ -144,13 +163,13 @@ use "${file_p}fake_SIDR_DOD_Dep.dta"
 		* Fraction with follow ups (at all)  
 		foreach days of numlist 30 60 90 {
 			gen f_u_c_`days' = 0
-			replace f_u_c_`days' = 1 if readmits_vis_`days'_ > 0 
+			replace f_u_c_`days' = 1 if readmits_vis_`days' > 0 
 			bysort DX: egen tfu_`days' = sum(f_u_c_`days')
 			gen frac_follow_up_`days' = tfu_`days'/total_obs 
 			label variable frac_follow_up_`days' "Frac. of Visits w/ Follow up before `days'"
 		}
 		foreach days of numlist 30 60 90{
-			bysort DX: egen total_fu_visits_`days' = sum(readmits_vis_`days'_)
+			bysort DX: egen total_fu_visits_`days' = sum(readmits_vis_`days')
 			label variable total_fu_visits_`days' "Total number of follow-ups before `days'"
 		}
 		keep DX frac_follow_up_* total_fu_* total_obs
