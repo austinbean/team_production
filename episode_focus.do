@@ -154,7 +154,6 @@ restore
 		drop if _merge != 3 
 		drop _merge 
 		drop if DX == ""
-// HERE... 
 		drop PID_PDE_PATIENT DATE_ADMISSION DATE_DISPOSITION dxct
 		sort DX 
 		bysort DX: gen tv_i = _n 
@@ -184,62 +183,112 @@ restore
 	restore 
 	
 	
-* CPT Codes - TODO.  
+* CPT Codes .  
 
 * Use SIDR for CPT and DX/ICD-9
 use "${file_p}fake_dep_4.dta", clear
 
-	* TODO - this does the count by enc_date.  Still need to merge on previous to get disposition date.  
-	* question... encdate is the date something happened, e.g., third day of a five day admission?  Then above concern not important.
+/*
+Notes - want asc1-13 variables.  But note the codebook separates 1-3 and 4-13
+mepr3 is the location vars.  
+the codes for this variable are in the codebook.  They are numerous.
+Codes for emergency are BIA BIZ (latter is emerg otherwise unclassified)
+- What about BIX?  
+
+*/
+
 	* TODO - do we want to track same-day procedures?  This is tricky.  Procedure done badly -> immediate, emergency follow up -> same day
 	format encdate %td // for readability in fake data.  
 	rename *, upper
 
-
-	keep PID_PDE_PATIENT ENCDATE CPT_*
+preserve 
+	keep PID_PDE_PATIENT ENCDATE CPT_* MEPR3
 	reshape long CPT_ , i(PID_PDE_PATIENT ENCDATE) j(ctr)
 	drop if CPT_ == ""
 	sort PID_PDE_PATIENT ENCDATE ctr 
 	drop ctr 
-	bysort PID_PDE_PATIENT (ENCDATE): gen cptcx = _n
-	summarize cptcx
-	local max_cpt = `r(max)'
-	reshape wide CPT_ ENCDATE  , i(PID_PDE_PATIENT) j(cptcx)
-	foreach daylim of numlist 30 60 90 { 
-		foreach vis1 of numlist 1(1)`max_cpt'{
-			gen readmitsd`daylim'd_`vis1' = 0
-			foreach vis2 of numlist 1(1)`max_cpt'{
-			    * only checks if the second CPT happened same day or later, that it is within daylim, and that later visits are not missing
-				replace readmitsd`daylim'd_`vis1' = readmitsd`daylim'd_`vis1' + 1 if (ENCDATE`vis2' - ENCDATE`vis1') > 0 & (ENCDATE`vis2' - ENCDATE`vis1') < `daylim' & CPT_`vis2' != "" & CPT_`vis1' != "" 
+	gen EMERGENCY = 0
+	replace EMERGENCY = 1 if MEPR3 == "BIA" |  MEPR3 == "BIZ" //  BIX code probably not important 
+	bysort PID_PDE_PATIENT ENCDATE: gen cptcx = _n
+	bysort PID_PDE_PATIENT ENCDATE: egen cptcount = max(cptcx)
+	drop cptcx
+	duplicates drop PID_PDE_PATIENT ENCDATE, force
+	drop CPT_ MEPR3 
+	bysort PID_PDE_PATIENT (ENCDATE): gen pctr = _n 
+	summarize pctr, d 
+	local mxvs = `r(max)'
+	reshape wide ENCDATE cptcount EMERGENCY, i(PID_PDE_PATIENT) j(pctr)
+	foreach daylim of numlist 30 60 90 {
+		local stopping = `mxvs'-1 
+		foreach prior_vis of numlist 1(1)`stopping'{
+			gen read_vis_`daylim'_`prior_vis' = 0 
+			gen ER_read_vis_`daylim'_`prior_vis' = 0
+			local next_vis = `prior_vis'+1
+			foreach current_vis of numlist `next_vis'(1)`mxvs'{
+				replace read_vis_`daylim'_`prior_vis' = read_vis_`daylim'_`prior_vis' + cptcount`current_vis' if (ENCDATE`current_vis' - ENCDATE`prior_vis' < `daylim') & (ENCDATE`current_vis' - ENCDATE`prior_vis' > 0)
+				* count readmissions to the ER 
+				replace read_vis_`daylim'_`prior_vis' = read_vis_`daylim'_`prior_vis' + cptcount`current_vis' if (ENCDATE`current_vis' - ENCDATE`prior_vis' < `daylim') & (ENCDATE`current_vis' - ENCDATE`prior_vis' > 0) & EMERGENCY`current_vis' == 1
+				}
 			}
 		}
+	reshape long ENCDATE EMERGENCY cptcount read_vis_30_ read_vis_60_ read_vis_90_ ER_read_vis_30_ ER_read_vis_60_ ER_read_vis_90_, i(PID_PDE_PATIENT) j(vctr)
+	drop if ENCDATE == . 
+	rename read_vis_*_ readmits_vis_*
+	rename ER_read_vis_*_ ER_readmits_vis_*
+	foreach daylim of numlist 30 60 90 {
+		replace readmits_vis_`daylim' = 0 if readmits_vis_`daylim' == .
+		replace ER_readmits_vis_`daylim' = 0 if readmits_vis_`daylim' == .
 	}
-	keep PID_PDE_PATIENT CPT_* ENCDATE* readmits* 
-	reshape long CPT_ ENCDATE readmitsd30d_ readmitsd60d_ readmitsd90d_ , i(PID_PDE_PATIENT) j(pctr)
-	foreach days of numlist 30 60 90{
-			replace readmitsd`days'd_ = 0 if readmitsd`days'd_ == .
-	}
-	rename CPT_ CPT 
+	drop vctr cptcount  
+	save "${file_p}temp_cpt_er_flw_up_count.dta", replace 
+restore 
+	
+	
+	
+	
+	
+	
+	
+preserve 	
+	keep PID_PDE_PATIENT ENCDATE CPT_* MEPR3
+	reshape long CPT_ , i(PID_PDE_PATIENT ENCDATE) j(ctr)
+	drop if CPT_ == ""
+	sort PID_PDE_PATIENT ENCDATE ctr 
+	drop ctr 
+	merge m:1 PID_PDE_PATIENT ENCDATE using "${file_p}temp_cpt_er_flw_up_count.dta"
+	drop if _merge != 3 
+	drop _merge 
+	rename CPT_ CPT
 	drop if CPT == ""
-	rename readmits*_ readmits* 
-	drop pctr PID_PDE_PATIENT ENCDATE
+	drop PID_PDE_PATIENT ENCDATE 
 	sort CPT 
-	bysort CPT: gen tr_i = _n 
-	bysort CPT: egen total_obs = max(tr_i)
-	drop tr_i 
+	bysort CPT: gen tv_i = _n 
+	bysort CPT: egen total_obs = max(tv_i)
+	drop tv_i
+	* Fraction with follow ups (at all)  
 	foreach days of numlist 30 60 90 {
 		gen f_u_c_`days' = 0
-		replace f_u_c_`days' = 1 if readmitsd`days'd > 0 
+		replace f_u_c_`days' = 1 if readmits_vis_`days' > 0 
 		bysort CPT: egen tfu_`days' = sum(f_u_c_`days')
 		gen frac_follow_up_`days' = tfu_`days'/total_obs 
-		label variable frac_follow_up_`days' "Frac. of Visits w/ Follow up before `days'"
+		label variable frac_follow_up_`days' "Frac. of Visits w/ ANY Follow up before `days'"
+* TODO - er follow up visit count not working exactly. 
+		* ER in particular 
+		gen ERf_u_c_`days' = 0
+		replace ERf_u_c_`days' = 1 if ER_readmits_vis_`days' > 0 
+		bysort CPT: egen ER_tfu_`days' = sum(ERf_u_c_`days')
+		gen ER_frac_follow_up_`days' = ER_tfu_`days'/total_obs 
+		label variable ER_frac_follow_up_`days' "Frac. of Visits w/ ER Follow up before `days'"
 	}
 	foreach days of numlist 30 60 90{
-		bysort CPT: egen total_fu_visits_`days' = sum(readmitsd`days'd)
+		bysort CPT: egen total_fu_visits_`days' = sum(readmits_vis_`days')
 		label variable total_fu_visits_`days' "Total number of follow-ups before `days'"
+		* ER in particular 
+		bysort CPT: egen ER_total_fu_visits_`days' = sum(ER_readmits_vis_`days')
+		label variable ER_total_fu_visits_`days' "Total number of follow-ups before `days'"
 	}
-	keep CPT frac_follow_up* total_fu_visits_* total_obs 
+	keep CPT frac_follow_up_* total_fu_* ER_frac_follow_up_* ER_total_fu_* total_obs
 	duplicates drop CPT, force 
 	* sadly nothing akin to icd9 check as above.
 	save "${file_p}freq_follow_ups_cpt.dta", replace
-	
+restore 
