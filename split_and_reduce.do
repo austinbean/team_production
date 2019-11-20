@@ -151,5 +151,5 @@ foreach block of local cut_levels{
 sort CPT 
 collapse (sum) total_obs total_fu_visits_30 ER_total_fu_visits_30 total_fu_visits_60 ER_total_fu_visits_60 total_fu_visits_90 ER_total_fu_visits_90 (mean) frac_follow_up_30 ER_frac_follow_up_30 frac_follow_up_60 ER_frac_follow_up_60 frac_follow_up_90 ER_frac_follow_up_90, by(CPT)
 
-
+save "${file_p}freq_follow_ups_cpt.dta"
 
