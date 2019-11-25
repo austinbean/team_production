@@ -83,7 +83,7 @@ foreach block of local cut_levels{
 		rename ER_read_vis_*_ ER_readmits_vis_*
 		foreach daylim of numlist 30 60 90 {
 			replace readmits_vis_`daylim' = 0 if readmits_vis_`daylim' == .
-			replace ER_readmits_vis_`daylim' = 0 if readmits_vis_`daylim' == .
+			replace ER_readmits_vis_`daylim' = 0 if ER_readmits_vis_`daylim' == .
 		}
 		drop vctr cptcount  
 		save "${file_p}temp_cpt_er_BLOCK`block'.dta", replace 
