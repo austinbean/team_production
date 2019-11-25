@@ -2,7 +2,7 @@
 
 clear 
 
-do "/Users/tuk39938/Desktop/programs/team_production/master_filepaths.do"
+do "/Users/austinbean/Desktop/programs/team_production/master_filepaths.do"
 *do "C:\Users\atulgup\Dropbox (Penn)\Projects\Teams\team_production\master_filepaths.do"
 *do "C:\Users\STEPHEN\Dropbox (Personal)\Army-Baylor\Research\Teams\team_production\master_filepaths.do"
 
@@ -34,7 +34,7 @@ Codes for emergency are BIA BIZ (latter is emerg otherwise unclassified)
 	gen ctr1 = _n
 	xtile cutpoints = ctr1, nq(100)
 	drop ctr1 
-	save "${file_p}fake_dep_4.dta", replace
+	//save "${file_p}fake_dep_4.dta", replace
 
 
 	
@@ -73,7 +73,7 @@ foreach block of local cut_levels{
 				foreach current_vis of numlist `next_vis'(1)`mxvs'{
 					replace read_vis_`daylim'_`prior_vis' = read_vis_`daylim'_`prior_vis' + cptcount`current_vis' if (ENCDATE`current_vis' - ENCDATE`prior_vis' < `daylim') & (ENCDATE`current_vis' - ENCDATE`prior_vis' > 0)
 					* count readmissions to the ER 
-					replace read_vis_`daylim'_`prior_vis' = read_vis_`daylim'_`prior_vis' + cptcount`current_vis' if (ENCDATE`current_vis' - ENCDATE`prior_vis' < `daylim') & (ENCDATE`current_vis' - ENCDATE`prior_vis' > 0) & EMERGENCY`current_vis' == 1
+					replace ER_read_vis_`daylim'_`prior_vis' = ER_read_vis_`daylim'_`prior_vis' + cptcount`current_vis' if (ENCDATE`current_vis' - ENCDATE`prior_vis' < `daylim') & (ENCDATE`current_vis' - ENCDATE`prior_vis' > 0) & EMERGENCY`current_vis' == 1
 					}
 				}
 			}
